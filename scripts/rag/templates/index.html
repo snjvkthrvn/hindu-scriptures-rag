@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hindu Scriptures — Ask the Texts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+Devanagari:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-shell">
+        <!-- Compact Header -->
+        <header class="chat-header">
+            <div class="header-left">
+                <span class="header-om">&#x0950;</span>
+                <div>
+                    <h1 class="header-title">Hindu Scriptures</h1>
+                    <p class="header-sub">&#x0938;&#x0924;&#x094D;&#x092F;&#x092E;&#x0947;&#x0935; &#x091C;&#x092F;&#x0924;&#x0947; &mdash; Truth alone triumphs</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <span class="corpus-badge" id="corpusBadge"></span>
+                <button class="header-btn" id="newChatBtn" title="New conversation">New Chat</button>
+            </div>
+        </header>
+
+        <!-- Chat Messages -->
+        <main class="chat-messages" id="chatMessages">
+            <!-- Welcome state -->
+            <div class="welcome" id="welcome">
+                <div class="welcome-om">&#x0950;</div>
+                <h2 class="welcome-title">Ask the Scriptures</h2>
+                <p class="welcome-desc">I search across 190,000+ verses from the Vedas, Upanishads, Bhagavad Gita, Mahabharata, Ramayana, and more. I'll quote the original texts and break them down for you.</p>
+                <div class="welcome-prompts">
+                    <button class="prompt-chip" data-q="What does the Bhagavad Gita say about overcoming anxiety and fear?">Overcoming anxiety</button>
+                    <button class="prompt-chip" data-q="Explain the concept of Brahman in the Upanishads with key verses">Brahman in Upanishads</button>
+                    <button class="prompt-chip" data-q="What is the meaning of dharma according to the Mahabharata?">Dharma in Mahabharata</button>
+                    <button class="prompt-chip" data-q="Compare the teachings on devotion in the Gita vs the Ramcharitmanas">Bhakti: Gita vs Ramcharitmanas</button>
+                    <button class="prompt-chip" data-q="What do different schools of philosophy say about Bhagavad Gita verse 2.47?">BG 2.47 — all schools</button>
+                    <button class="prompt-chip" data-q="What does the Rigveda say about creation?">Rigveda on creation</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Input Bar -->
+        <footer class="chat-input-bar">
+            <div class="input-wrapper">
+                <textarea id="chatInput" rows="1" placeholder="Ask about any Hindu scripture..." autofocus></textarea>
+                <button class="send-btn" id="sendBtn" title="Send">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+            </div>
+            <p class="input-hint">Searches across Vedas, Upanishads, Gita, Epics &amp; more. Quotes original Sanskrit with translations.</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

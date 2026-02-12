@@ -1,0 +1,88 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Downloaded raw data (optional - uncomment if you don't want to track raw files)
+# raw/
+# processed/
+
+# Large output files (optional)
+# final/*.json
+
+# Embeddings (likely too large for git)
+final/embeddings/
+
+# ChromaDB vector store
+chromadb_data/
+
+# Qdrant vector store (very large)
+qdrant_data/
+
+# Large JSON files
+final/*.json
+raw/
+
+# Virtual environments
+venv-rag/
+venv/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+*.log
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables
+.env
+.env.local
+
+# OS-specific
+Thumbs.db
+Desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*~
