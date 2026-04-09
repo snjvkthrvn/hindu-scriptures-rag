@@ -524,6 +524,101 @@ body {
 }
 
 /* ==========================================================================
+   COPY BUTTON
+   ========================================================================== */
+.copy-btn {
+    display: block;
+    margin: 0.75rem 0 0 auto;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--warm-gray);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.3rem 0.7rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.copy-btn:hover {
+    color: var(--saffron);
+    border-color: var(--saffron);
+}
+
+/* ==========================================================================
+   SOURCE CITATION CARDS
+   ========================================================================== */
+.source-cards {
+    margin-top: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.source-cards summary {
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    color: var(--text-light);
+    padding: 0.55rem 0.85rem;
+    cursor: pointer;
+    background: var(--warm-gray);
+    user-select: none;
+    list-style: none;
+}
+.source-cards summary::before {
+    content: "\25B6\FE0E ";
+    font-size: 0.6rem;
+    margin-right: 0.35rem;
+    transition: transform 0.2s;
+    display: inline-block;
+}
+.source-cards[open] summary::before {
+    transform: rotate(90deg);
+}
+.source-card {
+    padding: 0.65rem 0.85rem;
+    border-top: 1px solid var(--border);
+}
+.source-card + .source-card {
+    border-top: 1px solid var(--border);
+}
+.source-header {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    color: var(--maroon);
+    letter-spacing: 0.02em;
+    margin-bottom: 0.3rem;
+}
+.source-text {
+    font-size: 0.88rem;
+    color: var(--text-light);
+    line-height: 1.55;
+    margin-bottom: 0.4rem;
+}
+.source-tags {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+.source-tag {
+    font-size: 0.68rem;
+    background: rgba(232, 130, 12, 0.08);
+    color: var(--saffron);
+    padding: 0.15rem 0.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(232, 130, 12, 0.15);
+}
+
+/* ==========================================================================
+   CANCEL / STOP BUTTON
+   ========================================================================== */
+.send-btn.cancel-mode {
+    background: linear-gradient(135deg, #991B1B, #7F1D1D);
+}
+.send-btn.cancel-mode:hover {
+    background: linear-gradient(135deg, #7F1D1D, #991B1B);
+}
+
+/* ==========================================================================
    Responsive
    ========================================================================== */
 @media (max-width: 640px) {
@@ -533,11 +628,16 @@ body {
     .header-sub { display: none; }
     .corpus-badge { display: none; }
     .chat-messages { padding: 1rem 0.65rem; }
-    .msg-bubble { max-width: 92%; }
+    .msg-bubble { max-width: 95%; }
+    .msg-avatar { width: 28px; height: 28px; font-size: 0.95rem; }
+    .welcome { padding: 2rem 0.5rem 1.5rem; }
     .welcome-title { font-size: 1.25rem; }
-    .welcome-desc { font-size: 0.9rem; }
-    .prompt-chip { font-size: 0.82rem; padding: 0.4rem 0.8rem; }
-    .msg-content { padding: 0.8rem 0.9rem; }
+    .welcome-desc { font-size: 0.9rem; margin-bottom: 1.25rem; }
+    .welcome-prompts { gap: 0.4rem; }
+    .prompt-chip { font-size: 0.82rem; padding: 0.5rem 0.85rem; }
+    .msg-content { padding: 0.8rem 0.9rem; font-size: 0.95rem; }
+    .source-card { padding: 0.55rem 0.7rem; }
+    .input-hint { font-size: 0.65rem; }
 }
 
 /* Large screens: add parchment border effect */
