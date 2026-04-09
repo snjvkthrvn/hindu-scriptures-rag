@@ -14,26 +14,7 @@ services:
     environment:
       - QDRANT__SERVICE__GRPC_PORT=6334
 
-  main-rag:
-    build: .
-    working_dir: /app/scripts/rag
-    command:
-      - gunicorn
-      - --bind=0.0.0.0:5001
-      - --workers=2
-      - --timeout=120
-      - --access-logfile=-
-      - app:app
-    env_file: .env
-    environment:
-      - QDRANT_URL=http://qdrant:6333
-    volumes:
-      - ./final:/app/final:ro
-    depends_on:
-      - qdrant
-    restart: unless-stopped
-
-  english-rag:
+  rag:
     build: .
     working_dir: /app/english-v1-rag
     command:
@@ -43,29 +24,15 @@ services:
       - --timeout=120
       - --access-logfile=-
       - app:app
+    ports:
+      - "5002:5002"
     env_file: .env
     environment:
       - QDRANT_URL=http://qdrant:6333
+    volumes:
+      - ./final:/app/final:ro
     depends_on:
       - qdrant
     restart: unless-stopped
 
-  caddy:
-    image: caddy:2-alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-    environment:
-      - DOMAIN=${DOMAIN:-localhost}
-    depends_on:
-      - main-rag
-      - english-rag
-    restart: unless-stopped
-
-volumes:
-  caddy_data:
-  caddy_config:
+volumes: {}

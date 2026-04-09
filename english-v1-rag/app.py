@@ -1,102 +1,33 @@
-"""Flask web interface for the English-only Hindu Scriptures RAG system.
+"""Flask web interface for the Hindu Scriptures RAG system.
+
+Serves two corpora from a single app:
+  /           — English-only corpus  (14k verses, always available)
+  /main       — Full corpus with Sanskrit  (118k verses, when data exists)
 
 Usage:
     python english-v1-rag/app.py
 """
 
 import json
+import os
 import sys
+import threading
 from dataclasses import replace
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, render_template, request, stream_with_context
+from flask import Blueprint, Flask, Response, jsonify, render_template, request, stream_with_context
 
-# english_config sets up sys.path (eng_dir first, then rag_dir)
 from english_config import get_english_config, ENGLISH_VERSES_FILE
+from config import RAGConfig, PROJECT_ROOT
 
 app = Flask(__name__)
 
-# ---------------------------------------------------------------------------
-# Build filter options from verses_english_only.json at startup
-# ---------------------------------------------------------------------------
-FILTER_OPTIONS = {"sources": [], "categories": [], "traditions": [], "total_verses": 0}
-
-try:
-    with open(ENGLISH_VERSES_FILE) as f:
-        _verses = json.load(f)
-    _sources = set()
-    _categories = set()
-    _traditions = set()
-    for v in _verses:
-        src = v.get("source", {}).get("text", "")
-        cat = v.get("metadata", {}).get("category", "")
-        trad = v.get("metadata", {}).get("tradition", "")
-        if src:
-            _sources.add(src)
-        if cat:
-            _categories.add(cat)
-        if trad:
-            _traditions.add(trad)
-    FILTER_OPTIONS = {
-        "sources": sorted(_sources),
-        "categories": sorted(_categories),
-        "traditions": sorted(_traditions),
-        "total_verses": len(_verses),
-    }
-    del _verses, _sources, _categories, _traditions
-except FileNotFoundError:
-    pass
-
-# Shared base config (immutable -- each request gets a copy)
-_base_config = get_english_config()
-
 
 # ---------------------------------------------------------------------------
-# Routes
+# Shared helpers
 # ---------------------------------------------------------------------------
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-
-@app.route("/api/sources")
-def api_sources():
-    return jsonify(FILTER_OPTIONS)
-
-
-@app.route("/api/query", methods=["POST"])
-def api_query():
-    """Non-agentic RAG query (direct search + LLM)."""
-    from query import query_rag
-
-    data = request.get_json(silent=True) or {}
-    question = (data.get("question") or "").strip()
-
-    if not question:
-        return jsonify({"error": "No question provided"}), 400
-
-    top_k = data.get("top_k", _base_config.top_k)
-    try:
-        top_k = max(1, min(int(top_k), 20))
-    except (ValueError, TypeError):
-        top_k = _base_config.top_k
-
-    config = replace(_base_config, top_k=top_k)
-
-    filters = data.get("filters") or {}
-    filter_dict = {}
-    if filters.get("source"):
-        filter_dict["source_text"] = filters["source"]
-    if filters.get("category"):
-        filter_dict["category"] = filters["category"]
-    if filters.get("tradition"):
-        filter_dict["tradition"] = filters["tradition"]
-
-    try:
-        result = query_rag(question, config=config, filter_dict=filter_dict or None)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+def _build_sources_response(result):
+    """Format search results for the frontend."""
     sources = []
     total_sources = max(len(result.get("sources", [])), 1)
     for i, src in enumerate(result.get("sources", [])):
@@ -125,66 +56,189 @@ def api_query():
             },
             "similarity": similarity,
         })
-
-    return jsonify({
-        "answer": result["answer"],
-        "sources": sources,
-    })
+    return sources
 
 
-@app.route("/api/agent", methods=["POST"])
-def api_agent():
-    """Agentic RAG query -- Claude reasons, calls tools, synthesizes."""
-    from agent.react_loop import run_agent
-    from agent.conversation import ConversationMemory
+def _make_rag_routes(bp_or_app, base_config, filter_options):
+    """Register /api/sources, /api/query, /api/agent, /api/agent/stream on a Flask app or Blueprint."""
 
-    data = request.get_json(silent=True) or {}
-    question = (data.get("question") or "").strip()
-    history = data.get("history") or []
+    @bp_or_app.route("/api/sources")
+    def api_sources():
+        return jsonify(filter_options)
 
-    if not question:
-        return jsonify({"error": "No question provided"}), 400
+    @bp_or_app.route("/api/query", methods=["POST"])
+    def api_query():
+        from query import query_rag
 
-    config = replace(_base_config)
+        data = request.get_json(silent=True) or {}
+        question = (data.get("question") or "").strip()
+        if not question:
+            return jsonify({"error": "No question provided"}), 400
 
-    memory = ConversationMemory(window=config.conversation_window)
-    for msg in history:
-        memory.add(msg.get("role", "user"), msg.get("content", ""))
-
-    try:
-        result = run_agent(question, config=config, memory=memory)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-    return jsonify(result)
-
-
-@app.route("/api/agent/stream", methods=["POST"])
-def api_agent_stream():
-    """Streaming agentic query -- SSE events for thinking steps + answer."""
-    from agent.react_loop import run_agent_stream
-
-    data = request.get_json(silent=True) or {}
-    question = (data.get("question") or "").strip()
-    history = data.get("history") or []
-
-    if not question:
-        return jsonify({"error": "No question provided"}), 400
-
-    config = replace(_base_config)
-
-    def event_stream():
+        top_k = data.get("top_k", base_config.top_k)
         try:
-            for event in run_agent_stream(question, config=config, history=history):
-                yield f"data: {json.dumps(event)}\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+            top_k = max(1, min(int(top_k), 20))
+        except (ValueError, TypeError):
+            top_k = base_config.top_k
 
-    return Response(
-        stream_with_context(event_stream()),
-        mimetype="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
+        config = replace(base_config, top_k=top_k)
+
+        filters = data.get("filters") or {}
+        filter_dict = {}
+        if filters.get("source"):
+            filter_dict["source_text"] = filters["source"]
+        if filters.get("category"):
+            filter_dict["category"] = filters["category"]
+        if filters.get("tradition"):
+            filter_dict["tradition"] = filters["tradition"]
+
+        try:
+            result = query_rag(question, config=config, filter_dict=filter_dict or None)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+        return jsonify({"answer": result["answer"], "sources": _build_sources_response(result)})
+
+    @bp_or_app.route("/api/agent", methods=["POST"])
+    def api_agent():
+        from agent.react_loop import run_agent
+        from agent.conversation import ConversationMemory
+
+        data = request.get_json(silent=True) or {}
+        question = (data.get("question") or "").strip()
+        history = data.get("history") or []
+        if not question:
+            return jsonify({"error": "No question provided"}), 400
+
+        config = replace(base_config)
+        memory = ConversationMemory(window=config.conversation_window)
+        for msg in history:
+            memory.add(msg.get("role", "user"), msg.get("content", ""))
+
+        try:
+            result = run_agent(question, config=config, memory=memory)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        return jsonify(result)
+
+    @bp_or_app.route("/api/agent/stream", methods=["POST"])
+    def api_agent_stream():
+        from agent.react_loop import run_agent_stream
+
+        data = request.get_json(silent=True) or {}
+        question = (data.get("question") or "").strip()
+        history = data.get("history") or []
+        if not question:
+            return jsonify({"error": "No question provided"}), 400
+
+        config = replace(base_config)
+
+        def event_stream():
+            try:
+                for event in run_agent_stream(question, config=config, history=history):
+                    yield f"data: {json.dumps(event)}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+
+        return Response(
+            stream_with_context(event_stream()),
+            mimetype="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+
+# ---------------------------------------------------------------------------
+# English corpus (root: /)
+# ---------------------------------------------------------------------------
+ENGLISH_FILTERS = {"sources": [], "categories": [], "traditions": [], "total_verses": 0}
+
+try:
+    with open(ENGLISH_VERSES_FILE) as f:
+        _verses = json.load(f)
+    _sources, _categories, _traditions = set(), set(), set()
+    for v in _verses:
+        s = v.get("source", {}).get("text", "")
+        c = v.get("metadata", {}).get("category", "")
+        t = v.get("metadata", {}).get("tradition", "")
+        if s: _sources.add(s)
+        if c: _categories.add(c)
+        if t: _traditions.add(t)
+    ENGLISH_FILTERS = {
+        "sources": sorted(_sources),
+        "categories": sorted(_categories),
+        "traditions": sorted(_traditions),
+        "total_verses": len(_verses),
+    }
+    del _verses, _sources, _categories, _traditions
+except FileNotFoundError:
+    pass
+
+_english_config = get_english_config()
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+_make_rag_routes(app, _english_config, ENGLISH_FILTERS)
+
+
+# ---------------------------------------------------------------------------
+# Full corpus Blueprint (prefix: /main)
+# ---------------------------------------------------------------------------
+_main_templates = PROJECT_ROOT / "scripts" / "rag" / "templates"
+_main_static = PROJECT_ROOT / "scripts" / "rag" / "static"
+
+main_bp = Blueprint(
+    "main", __name__,
+    url_prefix="/main",
+    template_folder=str(_main_templates),
+    static_folder=str(_main_static),
+    static_url_path="/static",
+)
+
+_metadata_path = PROJECT_ROOT / "final" / "metadata.json"
+try:
+    with open(_metadata_path) as f:
+        _corpus_meta = json.load(f)
+except FileNotFoundError:
+    _corpus_meta = {}
+
+MAIN_FILTERS = {
+    "sources": sorted(_corpus_meta.get("by_source", {}).keys()),
+    "categories": sorted(_corpus_meta.get("by_category", {}).keys()),
+    "traditions": sorted(_corpus_meta.get("by_tradition", {}).keys()),
+    "total_verses": _corpus_meta.get("total_verses", 0),
+}
+
+_main_config = RAGConfig()
+
+
+@main_bp.route("/")
+def main_index():
+    return render_template("index.html")
+
+
+_make_rag_routes(main_bp, _main_config, MAIN_FILTERS)
+app.register_blueprint(main_bp)
+
+
+# ---------------------------------------------------------------------------
+# Background warmup
+# ---------------------------------------------------------------------------
+def _warmup_rag():
+    if os.environ.get("RAG_WARMUP", "1") != "1":
+        return
+    try:
+        from search import warmup
+        warmup(_english_config)
+    except Exception:
+        pass
+
+
+if os.environ.get("RAG_WARMUP", "1") == "1":
+    threading.Thread(target=_warmup_rag, daemon=True).start()
 
 
 if __name__ == "__main__":

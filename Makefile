@@ -160,5 +160,5 @@ deploy-logs:
 	docker compose logs -f
 
 deploy-index:
-	docker compose exec english-rag python index_english.py
+	docker compose exec rag python index_english.py
 	@echo "English verses indexed."
