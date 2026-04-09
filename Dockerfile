@@ -12,7 +12,7 @@ RUN pip install --no-cache-dir -r requirements-rag.txt
 COPY scripts/rag/          scripts/rag/
 COPY english-v1-rag/       english-v1-rag/
 
-COPY final/                final/
+RUN mkdir -p final
 
 EXPOSE 5001 5002
 
