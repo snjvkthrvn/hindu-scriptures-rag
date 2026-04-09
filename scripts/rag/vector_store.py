@@ -1,6 +1,6 @@
 """Qdrant vector store with dense (Cohere) + sparse (BM25) vectors.
 
-Runs Qdrant in-process — no separate server needed.
+Uses Qdrant server (Docker) when QDRANT_URL is set, else runs in-process local storage.
 """
 
 import hashlib
@@ -37,9 +37,15 @@ class QdrantStore:
         self.config = config
         self.collection = config.qdrant_collection
 
-        # In-process Qdrant (persists to disk)
-        config.qdrant_path.mkdir(parents=True, exist_ok=True)
-        self.client = QdrantClient(path=str(config.qdrant_path))
+        if config.qdrant_url:
+            self.client = QdrantClient(
+                url=config.qdrant_url,
+                api_key=config.qdrant_api_key,
+            )
+        else:
+            # In-process Qdrant (persists to disk)
+            config.qdrant_path.mkdir(parents=True, exist_ok=True)
+            self.client = QdrantClient(path=str(config.qdrant_path))
 
         # Lazy-loaded BM25 encoder
         self._bm25_encoder = None

@@ -9,24 +9,41 @@ from config import RAGConfig
 from embeddings import CohereEmbedder
 from vector_store import QdrantStore
 
-# Module-level singletons — avoid re-creating clients on every search call.
+# Module-level caches keyed by config values — avoid re-creating clients on
+# every search call while supporting multiple collections / models.
 # The BM25 encoder in QdrantStore is especially expensive to reload.
-_embedder_cache: CohereEmbedder | None = None
-_store_cache: QdrantStore | None = None
+_embedder_cache: dict[str, CohereEmbedder] = {}
+_store_cache: dict[str, QdrantStore] = {}
 
 
 def _get_embedder(config: RAGConfig) -> CohereEmbedder:
-    global _embedder_cache
-    if _embedder_cache is None:
-        _embedder_cache = CohereEmbedder(config)
-    return _embedder_cache
+    key = config.cohere_model
+    if key not in _embedder_cache:
+        _embedder_cache[key] = CohereEmbedder(config)
+    return _embedder_cache[key]
 
 
 def _get_store(config: RAGConfig) -> QdrantStore:
-    global _store_cache
-    if _store_cache is None:
-        _store_cache = QdrantStore(config)
-    return _store_cache
+    key = config.qdrant_collection
+    if key not in _store_cache:
+        store = QdrantStore(config)
+        # Eagerly load BM25 so first hybrid search isn't slow
+        _ = store.bm25_encoder
+        _store_cache[key] = store
+    return _store_cache[key]
+
+
+def warmup(config: RAGConfig | None = None):
+    """Load all RAG components (embedder, Qdrant, BM25) with a minimal search.
+
+    Call at startup to avoid slow first user request.
+    """
+    if config is None:
+        config = RAGConfig()
+    try:
+        search("dharma", config=config, top_k=1)
+    except Exception:
+        pass  # Don't fail startup if warmup errors (e.g. no API key, empty collection)
 
 
 def _build_filter(filters: dict | None) -> models.Filter | None:

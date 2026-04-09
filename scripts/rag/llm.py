@@ -14,7 +14,10 @@ from config import RAGConfig
 def get_client(config: RAGConfig | None = None) -> anthropic.Anthropic:
     if config is None:
         config = RAGConfig()
-    return anthropic.Anthropic(api_key=config.anthropic_api_key)
+    return anthropic.Anthropic(
+        api_key=config.anthropic_api_key,
+        timeout=config.api_timeout_sec,
+    )
 
 
 def generate(

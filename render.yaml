@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: hindu-scriptures-english
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerCommand: sh -c "cd /app/english-v1-rag && gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - app:app"
+    envVars:
+      - key: COHERE_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: RAG_WARMUP
+        value: "1"
+
+  - type: web
+    name: hindu-scriptures-main
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerCommand: sh -c "cd /app/scripts/rag && gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - app:app"
+    envVars:
+      - key: COHERE_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: RAG_WARMUP
+        value: "1"

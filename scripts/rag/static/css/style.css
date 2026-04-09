@@ -246,6 +246,13 @@ body {
     font-size: 1rem;
     line-height: 1.55;
 }
+.msg-user .msg-content {
+    background: transparent;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+    color: var(--cream);
+}
 
 /* Assistant bubble */
 .msg-assistant .msg-bubble {

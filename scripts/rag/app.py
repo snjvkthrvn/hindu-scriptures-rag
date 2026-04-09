@@ -6,7 +6,9 @@ Usage:
 """
 
 import json
+import os
 import sys
+import threading
 from dataclasses import replace
 from pathlib import Path
 
@@ -15,6 +17,22 @@ from flask import Flask, Response, jsonify, render_template, request, stream_wit
 from config import RAGConfig, PROJECT_ROOT
 
 app = Flask(__name__)
+
+
+def _warmup_rag() -> None:
+    """Background warmup: load Cohere embedder, Qdrant, BM25 so first request is fast."""
+    if os.environ.get("RAG_WARMUP", "1") != "1":
+        return
+    try:
+        from search import warmup
+        warmup(RAGConfig())
+    except Exception:
+        pass
+
+
+# Start warmup in background at import time (works with python app.py, flask run, gunicorn)
+if os.environ.get("RAG_WARMUP", "1") == "1":
+    threading.Thread(target=_warmup_rag, daemon=True).start()
 
 # ---------------------------------------------------------------------------
 # Load filter options from metadata.json at startup

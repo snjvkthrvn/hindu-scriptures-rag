@@ -1,4 +1,4 @@
-.PHONY: help setup install install-rag test download parse format validate clean run ingest query web
+.PHONY: help setup install install-rag test download parse format validate clean run ingest query web qdrant-up qdrant-down deploy deploy-down deploy-logs deploy-index
 
 PYTHON := python3
 BASE_DIR := ~/hindu-scriptures-rag
@@ -21,9 +21,17 @@ help:
 	@echo ""
 	@echo "RAG System:"
 	@echo "  make install-rag - Install RAG dependencies"
+	@echo "  make qdrant-up   - Start Qdrant in Docker (set QDRANT_URL=http://localhost:6333)"
+	@echo "  make qdrant-down - Stop Qdrant Docker"
 	@echo "  make ingest      - Embed verses into ChromaDB"
 	@echo "  make query       - Interactive scripture Q&A"
 	@echo "  make web         - Launch web interface (Flask)"
+	@echo ""
+	@echo "Deployment (Docker Compose):"
+	@echo "  make deploy        - Build and start all services (Qdrant + apps + Caddy)"
+	@echo "  make deploy-down   - Stop all deployed services"
+	@echo "  make deploy-logs   - Tail logs from all services"
+	@echo "  make deploy-index  - Index English verses inside running container"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make clean      - Clean intermediate files"
@@ -107,6 +115,24 @@ deduplicate:
 install-rag:
 	@$(PYTHON) -m pip install -r requirements-rag.txt
 
+# Qdrant in Docker (recommended for 20k+ points)
+qdrant-up:
+	docker compose up -d qdrant
+	@echo "Qdrant at http://localhost:6333. Set QDRANT_URL=http://localhost:6333 in .env and re-index."
+
+qdrant-down:
+	docker compose down
+
+# English-only RAG (v1)
+english-build:
+	@$(PYTHON) english-v1-rag/build_english_verses.py
+
+english-index:
+	@$(PYTHON) english-v1-rag/index_english.py
+
+english-index-resume:
+	@$(PYTHON) english-v1-rag/index_english.py --resume
+
 ingest:
 	@cd $(SCRIPTS)/rag && $(PYTHON) ingest.py
 
@@ -115,3 +141,24 @@ query:
 
 web:
 	@cd $(SCRIPTS)/rag && $(PYTHON) app.py
+
+# Docker Compose deployment
+deploy:
+	docker compose up -d --build
+	@echo ""
+	@echo "Services started:"
+	@echo "  English RAG  → http://localhost (via Caddy)"
+	@echo "  Main RAG     → http://localhost/main (via Caddy)"
+	@echo "  Qdrant       → http://localhost:6333"
+	@echo ""
+	@echo "Next: run 'make deploy-index' to index verses into Qdrant."
+
+deploy-down:
+	docker compose down
+
+deploy-logs:
+	docker compose logs -f
+
+deploy-index:
+	docker compose exec english-rag python index_english.py
+	@echo "English verses indexed."

@@ -1,10 +1,12 @@
 # RAG system dependencies — Qdrant + Cohere + Claude stack
+python-dotenv>=1.0.0
 cohere>=5.0
 qdrant-client>=1.7.0
 fastembed>=0.2.0
 anthropic>=0.40.0
 tqdm>=4.64.0
 flask>=3.0.0
+gunicorn>=22.0.0
 
 # Optional: Ollama fallback (uncomment if needed)
 # langchain>=0.3.0

@@ -23,7 +23,8 @@ from embeddings import CohereEmbedder
 from vector_store import QdrantStore
 
 
-CHECKPOINT_FILE = PROJECT_ROOT / "qdrant_data" / "_indexer_checkpoint.json"
+def _checkpoint_file(config: RAGConfig) -> Path:
+    return PROJECT_ROOT / "qdrant_data" / f"_indexer_checkpoint_{config.qdrant_collection}.json"
 
 
 # ── Build embeddable / payload helpers ────────────────────────────────────
@@ -134,22 +135,25 @@ def build_commentary_embeddable(verse: dict, commentary: dict) -> str:
 
 # ── Checkpointing ────────────────────────────────────────────────────────
 
-def save_checkpoint(batch_index: int):
-    CHECKPOINT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(CHECKPOINT_FILE, "w") as f:
+def save_checkpoint(batch_index: int, config: RAGConfig):
+    cp = _checkpoint_file(config)
+    cp.parent.mkdir(parents=True, exist_ok=True)
+    with open(cp, "w") as f:
         json.dump({"batch_index": batch_index}, f)
 
 
-def load_checkpoint() -> int:
-    if CHECKPOINT_FILE.exists():
-        with open(CHECKPOINT_FILE) as f:
+def load_checkpoint(config: RAGConfig) -> int:
+    cp = _checkpoint_file(config)
+    if cp.exists():
+        with open(cp) as f:
             return json.load(f).get("batch_index", 0)
     return 0
 
 
-def clear_checkpoint():
-    if CHECKPOINT_FILE.exists():
-        CHECKPOINT_FILE.unlink()
+def clear_checkpoint(config: RAGConfig):
+    cp = _checkpoint_file(config)
+    if cp.exists():
+        cp.unlink()
 
 
 # ── Main indexing pipeline ────────────────────────────────────────────────
@@ -174,10 +178,10 @@ def index(config: RAGConfig | None = None, resume: bool = False) -> None:
 
     if not resume or not store.collection_exists():
         store.create_collection()
-        clear_checkpoint()
+        clear_checkpoint(config)
         start_batch = 0
     else:
-        start_batch = load_checkpoint()
+        start_batch = load_checkpoint(config)
         existing = store.count()
         print(f"Resuming from batch {start_batch} ({existing:,} points already indexed)")
 
@@ -246,9 +250,9 @@ def index(config: RAGConfig | None = None, resume: bool = False) -> None:
         store.upsert_batch(ids, dense_vectors, bm25_texts, payloads)
 
         # Save checkpoint every batch (cheap operation, protects against rate-limit failures)
-        save_checkpoint(batch_idx + 1)
+        save_checkpoint(batch_idx + 1, config)
 
-    clear_checkpoint()
+    clear_checkpoint(config)
     final_count = store.count()
     print(f"\nIndexing complete! Collection '{config.qdrant_collection}' has {final_count:,} points.")
 

@@ -52,8 +52,17 @@ class RAGConfig:
     )  # Delay between embed batches to stay under 2,000 inputs/min
 
     # --- Qdrant ---
+    # When set (e.g. "http://localhost:6333"), use Qdrant server (Docker). Else use local embedded storage.
+    qdrant_url: str | None = field(
+        default_factory=lambda: os.environ.get("QDRANT_URL") or None
+    )
+    qdrant_api_key: str | None = field(
+        default_factory=lambda: os.environ.get("QDRANT_API_KEY") or None
+    )
     qdrant_path: Path = field(default_factory=lambda: PROJECT_ROOT / "qdrant_data")
-    qdrant_collection: str = "hindu_scriptures"
+    qdrant_collection: str = field(
+        default_factory=lambda: os.environ.get("RAG_COLLECTION", "hindu_scriptures")
+    )
 
     # --- API keys (from environment) ---
     openai_api_key: str = field(default_factory=lambda: os.environ.get("OPENAI_API_KEY", ""))
@@ -73,3 +82,6 @@ class RAGConfig:
     # --- Agent settings ---
     max_agent_turns: int = 10
     conversation_window: int = 10
+
+    # --- API timeouts (prevent indefinite hangs) ---
+    api_timeout_sec: float = 90

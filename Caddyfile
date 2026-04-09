@@ -1,0 +1,15 @@
+{$DOMAIN:localhost} {
+	handle /main/* {
+		uri strip_prefix /main
+		reverse_proxy main-rag:5001
+	}
+
+	handle /main {
+		uri strip_prefix /main
+		reverse_proxy main-rag:5001
+	}
+
+	handle {
+		reverse_proxy english-rag:5002
+	}
+}
