@@ -5,8 +5,7 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "gunicorn --chdir /app/english-v1-rag --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - app:app",
-    "healthcheckPath": "/",
+    "startCommand": "sh -c 'gunicorn --chdir /app/english-v1-rag --bind 0.0.0.0:${PORT:-5002} --workers 2 --timeout 120 --access-logfile - app:app'",
     "restartPolicyType": "ON_FAILURE"
   }
 }
