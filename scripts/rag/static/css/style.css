@@ -424,7 +424,10 @@ body::before {
    ========================================================================== */
 .chat-messages {
     flex: 1;
+    min-height: 0; /* flex child must shrink or overflow-y:auto never scrolls */
     overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
     padding: 1.5rem 1rem 1rem;
     scroll-behavior: smooth;
     background:
