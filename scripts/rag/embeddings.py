@@ -28,7 +28,9 @@ class CohereEmbedder:
         self.dims = config.cohere_dims
         self.batch_delay = config.cohere_batch_delay_sec
 
-    def _embed_with_retry(self, texts: list[str], input_type: str, max_retries: int = 8) -> list[list[float]]:
+    def _embed_with_retry(
+        self, texts: list[str], input_type: str, max_retries: int = 8
+    ) -> list[list[float]]:
         """Embed with exponential backoff on rate limits.
 
         Catches both TooManyRequestsError and generic ApiError with status 429.
@@ -55,7 +57,9 @@ class CohereEmbedder:
                 # Try to use Retry-After header if provided
                 wait = None
                 if error_headers:
-                    retry_after = error_headers.get("retry-after") or error_headers.get("Retry-After")
+                    retry_after = error_headers.get("retry-after") or error_headers.get(
+                        "Retry-After"
+                    )
                     if retry_after:
                         try:
                             wait = int(retry_after)
@@ -64,9 +68,11 @@ class CohereEmbedder:
 
                 # Fall back to exponential backoff: 15, 30, 60, 120, 240, 480...
                 if wait is None:
-                    wait = min(2 ** attempt * 15, 600)
+                    wait = min(2**attempt * 15, 600)
 
-                print(f"  Rate limited (429). Waiting {wait}s (attempt {attempt + 1}/{max_retries})")
+                print(
+                    f"  Rate limited (429). Waiting {wait}s (attempt {attempt + 1}/{max_retries})"
+                )
                 if error_body:
                     print(f"    Error detail: {error_body}")
                 time.sleep(wait)
@@ -80,7 +86,6 @@ class CohereEmbedder:
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Embed a list of documents. Batches automatically with proactive rate limiting."""
         all_embeddings = []
-        total_batches = (len(texts) + self.BATCH_SIZE - 1) // self.BATCH_SIZE
 
         for i in range(0, len(texts), self.BATCH_SIZE):
             batch = texts[i : i + self.BATCH_SIZE]

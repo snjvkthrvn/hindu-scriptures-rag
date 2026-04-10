@@ -6,14 +6,11 @@ Usage:
 """
 
 import json
-import sys
-from pathlib import Path
 
 import chromadb
+from config import RAGConfig
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
-
-from config import RAGConfig
 
 
 def build_embeddable_text(verse: dict) -> str:
@@ -200,7 +197,9 @@ def ingest(config: RAGConfig | None = None) -> None:
             metadatas=metadatas,
         )
 
-    print(f"\nIngestion complete! Collection '{config.collection_name}' has {collection.count():,} documents.")
+    print(
+        f"\nIngestion complete! Collection '{config.collection_name}' has {collection.count():,} documents."
+    )
 
 
 if __name__ == "__main__":

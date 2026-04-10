@@ -1,18 +1,18 @@
 """Download Hindu scriptures from GitHub repositories."""
 
 import subprocess
-from pathlib import Path
-from typing import List, Dict, Tuple
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass
 class GitHubRepo:
     """GitHub repository metadata."""
+
     name: str
     url: str
     description: str
-    expected_files: List[str]
+    expected_files: list[str]
 
 
 class GitHubDownloader:
@@ -23,14 +23,14 @@ class GitHubDownloader:
             name="DharmicData",
             url="https://github.com/bhavykhatri/DharmicData.git",
             description="Structured Hindu scripture data (JSON)",
-            expected_files=["gita.json", "mahabharata.json", "ramayana.json"]
+            expected_files=["gita.json", "mahabharata.json", "ramayana.json"],
         ),
         GitHubRepo(
             name="indian-scriptures",
             url="https://github.com/hrgupta/indian-scriptures.git",
             description="11 Principal Upanishads in CSV format",
-            expected_files=["upanishads.csv", "isha_upanishad.csv"]
-        )
+            expected_files=["upanishads.csv", "isha_upanishad.csv"],
+        ),
     ]
 
     def __init__(self, base_dir: Path):
@@ -38,7 +38,7 @@ class GitHubDownloader:
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
-    def clone_repo(self, repo: GitHubRepo) -> Tuple[bool, str]:
+    def clone_repo(self, repo: GitHubRepo) -> tuple[bool, str]:
         """
         Clone a GitHub repository.
 
@@ -57,10 +57,10 @@ class GitHubDownloader:
 
         try:
             result = subprocess.run(
-                ['git', 'clone', '--depth', '1', repo.url, str(target_dir)],
+                ["git", "clone", "--depth", "1", repo.url, str(target_dir)],
                 capture_output=True,
                 text=True,
-                timeout=300
+                timeout=300,
             )
 
             if result.returncode == 0:
@@ -75,7 +75,7 @@ class GitHubDownloader:
         except Exception as e:
             return False, f"Unexpected error: {str(e)}"
 
-    def verify_repo(self, repo: GitHubRepo) -> Tuple[bool, List[str]]:
+    def verify_repo(self, repo: GitHubRepo) -> tuple[bool, list[str]]:
         """
         Verify that expected files exist in cloned repository.
 
@@ -96,7 +96,7 @@ class GitHubDownloader:
 
         return len(found_files) > 0, found_files
 
-    def download_all(self) -> Dict[str, Dict[str, str]]:
+    def download_all(self) -> dict[str, dict[str, str]]:
         """
         Download and verify all repositories.
 
@@ -106,18 +106,18 @@ class GitHubDownloader:
         results = {}
 
         for repo in self.REPOS:
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print(f"Processing: {repo.name}")
             print(f"Description: {repo.description}")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
 
             # Clone
             success, message = self.clone_repo(repo)
             results[repo.name] = {
-                'cloned': success,
-                'clone_message': message,
-                'files_found': [],
-                'verified': False
+                "cloned": success,
+                "clone_message": message,
+                "files_found": [],
+                "verified": False,
             }
 
             if not success:
@@ -128,19 +128,19 @@ class GitHubDownloader:
 
             # Verify
             verified, files = self.verify_repo(repo)
-            results[repo.name]['verified'] = verified
-            results[repo.name]['files_found'] = files
+            results[repo.name]["verified"] = verified
+            results[repo.name]["files_found"] = files
 
             if verified:
                 print(f"  ✓ Verification passed - {len(files)} expected file(s) found")
                 for file in files:
                     print(f"    - {file}")
             else:
-                print(f"  ⚠ Could not verify all expected files")
+                print("  ⚠ Could not verify all expected files")
 
         return results
 
-    def list_contents(self, repo_name: str) -> List[str]:
+    def list_contents(self, repo_name: str) -> list[str]:
         """List all files in a cloned repository."""
         target_dir = self.base_dir / repo_name.lower()
 
@@ -148,7 +148,7 @@ class GitHubDownloader:
             return []
 
         files = []
-        for file in target_dir.rglob('*'):
+        for file in target_dir.rglob("*"):
             if file.is_file():
                 files.append(str(file.relative_to(target_dir)))
 
@@ -161,15 +161,9 @@ def main():
 
     parser = argparse.ArgumentParser(description="Download Hindu scripture GitHub repos")
     parser.add_argument(
-        '--base-dir',
-        default='~/hindu-scriptures-rag/raw',
-        help='Base directory for downloads'
+        "--base-dir", default="~/hindu-scriptures-rag/raw", help="Base directory for downloads"
     )
-    parser.add_argument(
-        '--list',
-        action='store_true',
-        help='List available repositories'
-    )
+    parser.add_argument("--list", action="store_true", help="List available repositories")
 
     args = parser.parse_args()
     base_dir = Path(args.base_dir).expanduser()
@@ -186,16 +180,16 @@ def main():
     downloader = GitHubDownloader(base_dir)
     results = downloader.download_all()
 
-    print(f"\n\n{'='*60}")
+    print(f"\n\n{'=' * 60}")
     print("DOWNLOAD SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     for repo_name, result in results.items():
-        status = "✓ Complete" if result['verified'] else "⚠ Incomplete"
+        status = "✓ Complete" if result["verified"] else "⚠ Incomplete"
         print(f"{repo_name}: {status}")
 
     print(f"\nDownloads saved to: {base_dir}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

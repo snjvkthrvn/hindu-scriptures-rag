@@ -4,13 +4,13 @@ Same pipeline as scripts/rag/query.py but uses local English prompts.
 """
 
 # english_config sets up sys.path (eng_dir first, then rag_dir)
-from english_config import get_english_config  # noqa: F401 — side-effect: path setup
-
-from config import RAGConfig, LLMProvider
-from search import search, format_context
-from prompt_templates import SYSTEM_PROMPT, QUERY_PROMPT_TEMPLATE
-from sanskrit_gloss import augment_context_with_sanskrit_gloss
 import llm as llm_module
+from config import LLMProvider, RAGConfig
+from sanskrit_gloss import augment_context_with_sanskrit_gloss
+from search import format_context, search
+
+from english_config import get_english_config  # noqa: F401 — side-effect: path setup
+from prompt_templates import QUERY_PROMPT_TEMPLATE, SYSTEM_PROMPT
 
 
 def query_rag(
@@ -41,18 +41,20 @@ def query_rag(
             config=config,
         )
     elif config.llm_provider == LLMProvider.OLLAMA:
+        from langchain_core.messages import HumanMessage, SystemMessage
         from langchain_ollama import ChatOllama
-        from langchain_core.messages import SystemMessage, HumanMessage
 
         ollama = ChatOllama(
             model=config.ollama_model,
             base_url=config.ollama_base_url,
             temperature=config.temperature,
         )
-        response = ollama.invoke([
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(content=user_prompt),
-        ])
+        response = ollama.invoke(
+            [
+                SystemMessage(content=SYSTEM_PROMPT),
+                HumanMessage(content=user_prompt),
+            ]
+        )
         answer = response.content
     else:
         raise ValueError(f"Unsupported LLM provider: {config.llm_provider}")

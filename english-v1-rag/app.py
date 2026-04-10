@@ -11,18 +11,16 @@ Usage:
 import json
 import os
 import secrets
-import sys
 import threading
 from dataclasses import replace
-from pathlib import Path
 
+from auth_backend import register_auth
+from config import PROJECT_ROOT, RAGConfig
 from flask import Blueprint, Flask, Response, jsonify, render_template, request, stream_with_context
+from voices import VOICES
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from english_config import get_english_config, ENGLISH_VERSES_FILE
-from auth_backend import register_auth
-from config import RAGConfig, PROJECT_ROOT
-from voices import VOICES
+from english_config import ENGLISH_VERSES_FILE, get_english_config
 
 app = Flask(__name__)
 # Railway / reverse proxies send X-Forwarded-Proto; without this, url_for(..., _external=True)
@@ -48,23 +46,25 @@ def _build_sources_response(result):
 
         similarity = round((1 - (i / total_sources)) * 100, 1)
 
-        sources.append({
-            "header": header,
-            "sanskrit": src.get("sanskrit", ""),
-            "transliteration": src.get("transliteration", ""),
-            "translation": src.get("translation", ""),
-            "commentary_text": src.get("commentary_text", ""),
-            "author": src.get("author", ""),
-            "chunk_type": src.get("chunk_type", "verse"),
-            "metadata": {
-                "source_text": src.get("source_text", ""),
-                "category": src.get("category", ""),
-                "tradition": src.get("tradition", ""),
-                "chapter": src.get("chapter", 0),
-                "verse": src.get("verse_num", 0),
-            },
-            "similarity": similarity,
-        })
+        sources.append(
+            {
+                "header": header,
+                "sanskrit": src.get("sanskrit", ""),
+                "transliteration": src.get("transliteration", ""),
+                "translation": src.get("translation", ""),
+                "commentary_text": src.get("commentary_text", ""),
+                "author": src.get("author", ""),
+                "chunk_type": src.get("chunk_type", "verse"),
+                "metadata": {
+                    "source_text": src.get("source_text", ""),
+                    "category": src.get("category", ""),
+                    "tradition": src.get("tradition", ""),
+                    "chapter": src.get("chapter", 0),
+                    "verse": src.get("verse_num", 0),
+                },
+                "similarity": similarity,
+            }
+        )
     return sources
 
 
@@ -110,8 +110,8 @@ def _make_rag_routes(bp_or_app, base_config, filter_options):
 
     @bp_or_app.route("/api/agent", methods=["POST"])
     def api_agent():
-        from agent.react_loop import run_agent
         from agent.conversation import ConversationMemory
+        from agent.react_loop import run_agent
 
         data = request.get_json(silent=True) or {}
         question = (data.get("question") or "").strip()
@@ -147,7 +147,10 @@ def _make_rag_routes(bp_or_app, base_config, filter_options):
         def event_stream():
             try:
                 for event in run_agent_stream(
-                    question, config=config, history=history, voice=voice,
+                    question,
+                    config=config,
+                    history=history,
+                    voice=voice,
                 ):
                     yield f"data: {json.dumps(event)}\n\n"
             except Exception as e:
@@ -161,10 +164,12 @@ def _make_rag_routes(bp_or_app, base_config, filter_options):
 
     @bp_or_app.route("/api/voices")
     def api_voices():
-        return jsonify({
-            key: {"name": v["name"], "is_default": v.get("is_default", False)}
-            for key, v in VOICES.items()
-        })
+        return jsonify(
+            {
+                key: {"name": v["name"], "is_default": v.get("is_default", False)}
+                for key, v in VOICES.items()
+            }
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -180,9 +185,12 @@ try:
         s = v.get("source", {}).get("text", "")
         c = v.get("metadata", {}).get("category", "")
         t = v.get("metadata", {}).get("tradition", "")
-        if s: _sources.add(s)
-        if c: _categories.add(c)
-        if t: _traditions.add(t)
+        if s:
+            _sources.add(s)
+        if c:
+            _categories.add(c)
+        if t:
+            _traditions.add(t)
     ENGLISH_FILTERS = {
         "sources": sorted(_sources),
         "categories": sorted(_categories),
@@ -211,7 +219,8 @@ _main_templates = PROJECT_ROOT / "scripts" / "rag" / "templates"
 _main_static = PROJECT_ROOT / "scripts" / "rag" / "static"
 
 main_bp = Blueprint(
-    "main", __name__,
+    "main",
+    __name__,
     url_prefix="/main",
     template_folder=str(_main_templates),
     static_folder=str(_main_static),
@@ -252,6 +261,7 @@ def _warmup_rag():
         return
     try:
         from search import warmup
+
         warmup(_english_config)
     except Exception:
         pass

@@ -13,13 +13,11 @@ Usage:
 
 import json
 import sys
-import time
 from pathlib import Path
 
-from tqdm import tqdm
-
-from config import RAGConfig, PROJECT_ROOT
+from config import PROJECT_ROOT, RAGConfig
 from embeddings import CohereEmbedder
+from tqdm import tqdm
 from vector_store import QdrantStore
 
 
@@ -28,6 +26,7 @@ def _checkpoint_file(config: RAGConfig) -> Path:
 
 
 # ── Build embeddable / payload helpers ────────────────────────────────────
+
 
 def build_embeddable_text(verse: dict) -> str:
     """Build text for embedding. Priority: translation > transliteration > sanskrit."""
@@ -135,6 +134,7 @@ def build_commentary_embeddable(verse: dict, commentary: dict) -> str:
 
 # ── Checkpointing ────────────────────────────────────────────────────────
 
+
 def save_checkpoint(batch_index: int, config: RAGConfig):
     cp = _checkpoint_file(config)
     cp.parent.mkdir(parents=True, exist_ok=True)
@@ -157,6 +157,7 @@ def clear_checkpoint(config: RAGConfig):
 
 
 # ── Main indexing pipeline ────────────────────────────────────────────────
+
 
 def index(config: RAGConfig | None = None, resume: bool = False) -> None:
     """Run the full Qdrant indexing pipeline."""
@@ -233,8 +234,9 @@ def index(config: RAGConfig | None = None, resume: bool = False) -> None:
     if start_batch > 0:
         print(f"Skipping first {start_batch} batches (already done)")
 
-    for batch_idx in tqdm(range(start_batch, total_batches), desc="Indexing",
-                          initial=start_batch, total=total_batches):
+    for batch_idx in tqdm(
+        range(start_batch, total_batches), desc="Indexing", initial=start_batch, total=total_batches
+    ):
         start = batch_idx * batch_size
         batch = all_chunks[start : start + batch_size]
 
@@ -254,7 +256,9 @@ def index(config: RAGConfig | None = None, resume: bool = False) -> None:
 
     clear_checkpoint(config)
     final_count = store.count()
-    print(f"\nIndexing complete! Collection '{config.qdrant_collection}' has {final_count:,} points.")
+    print(
+        f"\nIndexing complete! Collection '{config.qdrant_collection}' has {final_count:,} points."
+    )
 
 
 if __name__ == "__main__":

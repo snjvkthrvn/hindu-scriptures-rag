@@ -70,6 +70,9 @@ venv/
 # Jupyter notebooks
 .ipynb_checkpoints/
 
+# Ruff
+.ruff_cache/
+
 # pytest
 .pytest_cache/
 .coverage

@@ -5,9 +5,24 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROMAN_TO_INT = {
-    "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6, "VII": 7, "VIII": 8,
-    "IX": 9, "X": 10, "XI": 11, "XII": 12, "XIII": 13, "XIV": 14, "XV": 15,
-    "XVI": 16, "XVII": 17, "XVIII": 18,
+    "I": 1,
+    "II": 2,
+    "III": 3,
+    "IV": 4,
+    "V": 5,
+    "VI": 6,
+    "VII": 7,
+    "VIII": 8,
+    "IX": 9,
+    "X": 10,
+    "XI": 11,
+    "XII": 12,
+    "XIII": 13,
+    "XIV": 14,
+    "XV": 15,
+    "XVI": 16,
+    "XVII": 17,
+    "XVIII": 18,
 }
 
 # Target window: ~200 words, overlap: ~50 words
@@ -51,7 +66,7 @@ def parse_arnold_gita(txt_path: Path) -> list[dict]:
     m0 = re.search(r"\n\s*CHAPTER\s+I\b", text, re.IGNORECASE)
     if not m0:
         return []
-    text = text[m0.start():]
+    text = text[m0.start() :]
 
     verses = []
     # Find each chapter: "CHAPTER N" ... until "HERE ENDETH" or next "CHAPTER"
@@ -72,10 +87,12 @@ def parse_arnold_gita(txt_path: Path) -> list[dict]:
             text[start:],
             re.IGNORECASE,
         )
-        chunk = text[start: start + end_match.start()] if end_match else text[start:]
+        chunk = text[start : start + end_match.start()] if end_match else text[start:]
 
         # Split by speaker blocks: "  Arjuna.\n", "  Krishna.\n", etc.
-        blocks = re.split(r"\n\s{2,}(?:Dhritirashtra|Sanjaya|Arjuna|Krishna)\.\s*\n", chunk, flags=re.IGNORECASE)
+        blocks = re.split(
+            r"\n\s{2,}(?:Dhritirashtra|Sanjaya|Arjuna|Krishna)\.\s*\n", chunk, flags=re.IGNORECASE
+        )
         verse_in_chapter = 0
         for block in blocks:
             block = re.sub(r"\s+", " ", block).strip()
@@ -88,32 +105,34 @@ def parse_arnold_gita(txt_path: Path) -> list[dict]:
                 if len(window) < 25:
                     continue
                 verse_in_chapter += 1
-                verses.append({
-                    "id": f"bg_arnold_{chapter_num}_{verse_in_chapter}",
-                    "source": {
-                        "text": "Bhagavad Gita (Arnold)",
-                        "chapter": chapter_num,
-                        "chapter_name": f"Chapter {chapter_num}",
-                        "verse": verse_in_chapter,
-                    },
-                    "content": {
-                        "sanskrit": "",
-                        "transliteration": "",
-                        "translation": window,
-                    },
-                    "metadata": {
-                        "category": "smriti",
-                        "tradition": "vedanta",
-                        "themes": ["bhagavad_gita", "karma", "dharma"],
-                    },
-                    "commentaries": [],
-                    "provenance": {
-                        "download_source": "gutenberg",
-                        "original_url": "https://www.gutenberg.org/ebooks/2388",
-                        "license": "Public Domain",
-                        "translator": "Sir Edwin Arnold",
-                        "processed_date": datetime.now(timezone.utc).isoformat(),
-                    },
-                })
+                verses.append(
+                    {
+                        "id": f"bg_arnold_{chapter_num}_{verse_in_chapter}",
+                        "source": {
+                            "text": "Bhagavad Gita (Arnold)",
+                            "chapter": chapter_num,
+                            "chapter_name": f"Chapter {chapter_num}",
+                            "verse": verse_in_chapter,
+                        },
+                        "content": {
+                            "sanskrit": "",
+                            "transliteration": "",
+                            "translation": window,
+                        },
+                        "metadata": {
+                            "category": "smriti",
+                            "tradition": "vedanta",
+                            "themes": ["bhagavad_gita", "karma", "dharma"],
+                        },
+                        "commentaries": [],
+                        "provenance": {
+                            "download_source": "gutenberg",
+                            "original_url": "https://www.gutenberg.org/ebooks/2388",
+                            "license": "Public Domain",
+                            "translator": "Sir Edwin Arnold",
+                            "processed_date": datetime.now(timezone.utc).isoformat(),
+                        },
+                    }
+                )
 
     return verses

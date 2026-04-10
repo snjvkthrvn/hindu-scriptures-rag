@@ -13,16 +13,16 @@ _eng_dir = str(Path(__file__).resolve().parent.parent)
 if _eng_dir not in sys.path:
     sys.path.insert(0, _eng_dir)
 
-from english_config import get_english_config  # noqa: F401 — side-effect: path setup
-
-from config import RAGConfig
-from prompt_templates import AGENT_SYSTEM_PROMPT
 import llm as llm_module
-from agent.tools import TOOL_DEFINITIONS, execute_tool
-from agent.conversation import ConversationMemory
+from config import RAGConfig
 from voices import get_voice_prompt
+
 from agent.citations import extract_refs
+from agent.conversation import ConversationMemory
 from agent.followups import generate_followups
+from agent.tools import TOOL_DEFINITIONS, execute_tool
+from english_config import get_english_config  # noqa: F401 — side-effect: path setup
+from prompt_templates import AGENT_SYSTEM_PROMPT
 
 
 def run_agent(
@@ -55,7 +55,7 @@ def run_agent(
     tool_calls_log = []
     max_turns = config.max_agent_turns
 
-    for turn in range(max_turns):
+    for _turn in range(max_turns):
         response = llm_module.generate_with_tools(
             system=system_prompt,
             messages=messages,
@@ -64,9 +64,7 @@ def run_agent(
         )
 
         if response.stop_reason == "end_turn":
-            answer = "".join(
-                block.text for block in response.content if block.type == "text"
-            )
+            answer = "".join(block.text for block in response.content if block.type == "text")
             memory.add("user", question)
             memory.add("assistant", answer)
 
@@ -79,17 +77,21 @@ def run_agent(
             assistant_content = []
             for block in response.content:
                 if block.type == "text":
-                    assistant_content.append({
-                        "type": "text",
-                        "text": block.text,
-                    })
+                    assistant_content.append(
+                        {
+                            "type": "text",
+                            "text": block.text,
+                        }
+                    )
                 elif block.type == "tool_use":
-                    assistant_content.append({
-                        "type": "tool_use",
-                        "id": block.id,
-                        "name": block.name,
-                        "input": block.input,
-                    })
+                    assistant_content.append(
+                        {
+                            "type": "tool_use",
+                            "id": block.id,
+                            "name": block.name,
+                            "input": block.input,
+                        }
+                    )
 
             messages.append({"role": "assistant", "content": assistant_content})
 
@@ -102,29 +104,33 @@ def run_agent(
                 tool_input = block.input
 
                 input_summary = _summarize_input(tool_name, tool_input)
-                tool_calls_log.append({
-                    "name": tool_name,
-                    "input": tool_input,
-                    "input_summary": input_summary,
-                })
+                tool_calls_log.append(
+                    {
+                        "name": tool_name,
+                        "input": tool_input,
+                        "input_summary": input_summary,
+                    }
+                )
 
                 try:
                     result_text = execute_tool(tool_name, tool_input, config)
                 except Exception as e:
-                    result_text = f"Error executing {tool_name}: {e}. Try a different query or tool."
+                    result_text = (
+                        f"Error executing {tool_name}: {e}. Try a different query or tool."
+                    )
 
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": result_text,
-                })
+                tool_results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result_text,
+                    }
+                )
 
             messages.append({"role": "user", "content": tool_results})
 
         else:
-            answer = "".join(
-                block.text for block in response.content if block.type == "text"
-            )
+            answer = "".join(block.text for block in response.content if block.type == "text")
             return {
                 "answer": answer or "I encountered an issue processing your question.",
                 "tool_calls": tool_calls_log,
@@ -171,7 +177,7 @@ def run_agent_stream(
     tool_calls_log = []
     max_turns = config.max_agent_turns
 
-    for turn in range(max_turns):
+    for _turn in range(max_turns):
         response = llm_module.generate_with_tools(
             system=system_prompt,
             messages=messages,
@@ -195,6 +201,7 @@ def run_agent_stream(
 
             try:
                 from anthropic import Anthropic
+
                 client = Anthropic()
                 followups = generate_followups(client, question, answer)
                 if followups:
@@ -215,12 +222,14 @@ def run_agent_stream(
                 if block.type == "text":
                     assistant_content.append({"type": "text", "text": block.text})
                 elif block.type == "tool_use":
-                    assistant_content.append({
-                        "type": "tool_use",
-                        "id": block.id,
-                        "name": block.name,
-                        "input": block.input,
-                    })
+                    assistant_content.append(
+                        {
+                            "type": "tool_use",
+                            "id": block.id,
+                            "name": block.name,
+                            "input": block.input,
+                        }
+                    )
 
             messages.append({"role": "assistant", "content": assistant_content})
 
@@ -232,22 +241,28 @@ def run_agent_stream(
                 input_summary = _summarize_input(block.name, block.input)
                 yield {"type": "tool_call", "name": block.name, "input": block.input}
 
-                tool_calls_log.append({
-                    "name": block.name,
-                    "input": block.input,
-                    "input_summary": input_summary,
-                })
+                tool_calls_log.append(
+                    {
+                        "name": block.name,
+                        "input": block.input,
+                        "input_summary": input_summary,
+                    }
+                )
 
                 try:
                     result_text = execute_tool(block.name, block.input, config)
                 except Exception as e:
-                    result_text = f"Error executing {block.name}: {e}. Try a different query or tool."
+                    result_text = (
+                        f"Error executing {block.name}: {e}. Try a different query or tool."
+                    )
 
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": result_text,
-                })
+                tool_results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result_text,
+                    }
+                )
 
                 result_lines = result_text.strip().split("\n")
                 summary = result_lines[0][:120] if result_lines else "No results"
@@ -256,9 +271,7 @@ def run_agent_stream(
             messages.append({"role": "user", "content": tool_results})
 
         else:
-            answer = "".join(
-                block.text for block in response.content if block.type == "text"
-            )
+            answer = "".join(block.text for block in response.content if block.type == "text")
             yield {"type": "answer_chunk", "content": answer or "Something went wrong."}
             yield {"type": "done", "tool_calls": tool_calls_log}
             return

@@ -1,27 +1,26 @@
 """Quality validation and checking utilities."""
 
 import json
-from typing import List, Dict, Any, Tuple
 from pathlib import Path
-from .unicode_utils import is_devanagari_char, count_devanagari_chars
+from typing import Any
+
+from .unicode_utils import is_devanagari_char
 
 
 class VersValidator:
     """Validate verse documents against schema."""
 
-    REQUIRED_FIELDS = {
-        'id', 'source', 'content', 'metadata', 'provenance'
-    }
+    REQUIRED_FIELDS = {"id", "source", "content", "metadata", "provenance"}
 
-    SOURCE_FIELDS = {'text', 'chapter', 'verse'}
-    CONTENT_FIELDS = {'sanskrit', 'transliteration', 'translation'}
+    SOURCE_FIELDS = {"text", "chapter", "verse"}
+    CONTENT_FIELDS = {"sanskrit", "transliteration", "translation"}
     # At least one of sanskrit or translation must be non-empty
     CONTENT_FIELDS_REQUIRED = set()  # Checked separately
-    METADATA_FIELDS = {'category', 'tradition', 'themes'}
-    PROVENANCE_FIELDS = {'download_source', 'license', 'processed_date'}
+    METADATA_FIELDS = {"category", "tradition", "themes"}
+    PROVENANCE_FIELDS = {"download_source", "license", "processed_date"}
 
     @classmethod
-    def validate_verse(cls, verse: Dict[str, Any]) -> Tuple[bool, List[str]]:
+    def validate_verse(cls, verse: dict[str, Any]) -> tuple[bool, list[str]]:
         """
         Validate a single verse document.
 
@@ -39,67 +38,67 @@ class VersValidator:
             return False, errors
 
         # Validate source
-        if not isinstance(verse.get('source'), dict):
+        if not isinstance(verse.get("source"), dict):
             errors.append("source must be a dict")
         else:
             for field in cls.SOURCE_FIELDS:
-                if field not in verse['source']:
+                if field not in verse["source"]:
                     errors.append(f"Missing source.{field}")
 
         # Validate content
-        if not isinstance(verse.get('content'), dict):
+        if not isinstance(verse.get("content"), dict):
             errors.append("content must be a dict")
         else:
             for field in cls.CONTENT_FIELDS:
-                if field not in verse['content']:
+                if field not in verse["content"]:
                     errors.append(f"Missing content.{field}")
                 else:
-                    value = verse['content'][field]
+                    value = verse["content"][field]
                     if not isinstance(value, str):
                         errors.append(f"content.{field} must be string")
             # At least sanskrit or translation must be non-empty
-            content = verse.get('content', {})
-            sanskrit = (content.get('sanskrit') or '').strip()
-            translation = (content.get('translation') or '').strip()
+            content = verse.get("content", {})
+            sanskrit = (content.get("sanskrit") or "").strip()
+            translation = (content.get("translation") or "").strip()
             if not sanskrit and not translation:
                 errors.append("content must have non-empty sanskrit or translation")
 
         # Validate metadata
-        if not isinstance(verse.get('metadata'), dict):
+        if not isinstance(verse.get("metadata"), dict):
             errors.append("metadata must be a dict")
         else:
             for field in cls.METADATA_FIELDS:
-                if field not in verse['metadata']:
+                if field not in verse["metadata"]:
                     errors.append(f"Missing metadata.{field}")
 
         # Validate provenance
-        if not isinstance(verse.get('provenance'), dict):
+        if not isinstance(verse.get("provenance"), dict):
             errors.append("provenance must be a dict")
         else:
             for field in cls.PROVENANCE_FIELDS:
-                if field not in verse['provenance']:
+                if field not in verse["provenance"]:
                     errors.append(f"Missing provenance.{field}")
 
         # Validate ID format
-        verse_id = verse.get('id', '')
+        verse_id = verse.get("id", "")
         if not verse_id or not isinstance(verse_id, str):
             errors.append("id must be non-empty string")
 
         return len(errors) == 0, errors
 
     @classmethod
-    def check_sanskrit_translation_alignment(cls, verse: Dict[str, Any]) -> bool:
+    def check_sanskrit_translation_alignment(cls, verse: dict[str, Any]) -> bool:
         """
         Check if Sanskrit and translation appear aligned.
 
         Basic heuristic: translation should be at least 30% of Sanskrit length.
         """
-        if 'content' not in verse:
+        if "content" not in verse:
             return False
 
-        content = verse['content']
-        sanskrit = content.get('sanskrit', '')
-        translation = content.get('translation', '')
+        content = verse["content"]
+        sanskrit = content.get("sanskrit", "")
+        translation = content.get("translation", "")
 
         if not sanskrit or not translation:
             return False
@@ -121,7 +120,7 @@ class CorpusValidator:
         self.invalid_verses = 0
         self.errors = []
 
-    def validate_file(self, json_file: Path) -> Dict[str, Any]:
+    def validate_file(self, json_file: Path) -> dict[str, Any]:
         """
         Validate a JSON verses file.
 
@@ -129,87 +128,88 @@ class CorpusValidator:
             Statistics and error report
         """
         stats = {
-            'total': 0,
-            'valid': 0,
-            'invalid': 0,
-            'errors': [],
-            'by_source': {},
-            'by_category': {}
+            "total": 0,
+            "valid": 0,
+            "invalid": 0,
+            "errors": [],
+            "by_source": {},
+            "by_category": {},
         }
 
         try:
-            with open(json_file, 'r', encoding='utf-8') as f:
+            with open(json_file, encoding="utf-8") as f:
                 data = json.load(f)
 
             if not isinstance(data, list):
-                stats['errors'].append("Root element must be a list")
+                stats["errors"].append("Root element must be a list")
                 return stats
 
             for i, verse in enumerate(data):
-                stats['total'] += 1
+                stats["total"] += 1
                 is_valid, errors = VersValidator.validate_verse(verse)
 
                 if is_valid:
-                    stats['valid'] += 1
+                    stats["valid"] += 1
                 else:
-                    stats['invalid'] += 1
-                    stats['errors'].append({
-                        'verse_id': verse.get('id', f'unknown_{i}'),
-                        'errors': errors
-                    })
+                    stats["invalid"] += 1
+                    stats["errors"].append(
+                        {"verse_id": verse.get("id", f"unknown_{i}"), "errors": errors}
+                    )
 
                 # Track by source
-                source = verse.get('source', {}).get('text', 'unknown')
-                if source not in stats['by_source']:
-                    stats['by_source'][source] = {'total': 0, 'valid': 0}
-                stats['by_source'][source]['total'] += 1
+                source = verse.get("source", {}).get("text", "unknown")
+                if source not in stats["by_source"]:
+                    stats["by_source"][source] = {"total": 0, "valid": 0}
+                stats["by_source"][source]["total"] += 1
                 if is_valid:
-                    stats['by_source'][source]['valid'] += 1
+                    stats["by_source"][source]["valid"] += 1
 
                 # Track by category
-                category = verse.get('metadata', {}).get('category', 'unknown')
-                if category not in stats['by_category']:
-                    stats['by_category'][category] = {'total': 0, 'valid': 0}
-                stats['by_category'][category]['total'] += 1
+                category = verse.get("metadata", {}).get("category", "unknown")
+                if category not in stats["by_category"]:
+                    stats["by_category"][category] = {"total": 0, "valid": 0}
+                stats["by_category"][category]["total"] += 1
                 if is_valid:
-                    stats['by_category'][category]['valid'] += 1
+                    stats["by_category"][category]["valid"] += 1
 
         except json.JSONDecodeError as e:
-            stats['errors'].append(f"JSON parsing error: {str(e)}")
+            stats["errors"].append(f"JSON parsing error: {str(e)}")
         except Exception as e:
-            stats['errors'].append(f"Unexpected error: {str(e)}")
+            stats["errors"].append(f"Unexpected error: {str(e)}")
 
         return stats
 
-    def print_report(self, stats: Dict[str, Any]) -> None:
+    def print_report(self, stats: dict[str, Any]) -> None:
         """Pretty print validation report."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("CORPUS VALIDATION REPORT")
-        print("="*60)
+        print("=" * 60)
 
-        print(f"\nOverall Statistics:")
+        print("\nOverall Statistics:")
         print(f"  Total verses: {stats['total']}")
-        print(f"  Valid verses: {stats['valid']} ({100*stats['valid']/max(stats['total'],1):.1f}%)")
+        print(
+            f"  Valid verses: {stats['valid']} ({100 * stats['valid'] / max(stats['total'], 1):.1f}%)"
+        )
         print(f"  Invalid verses: {stats['invalid']}")
 
-        if stats['by_source']:
-            print(f"\nBreakdown by source:")
-            for source, counts in sorted(stats['by_source'].items()):
-                pct = 100 * counts['valid'] / max(counts['total'], 1)
+        if stats["by_source"]:
+            print("\nBreakdown by source:")
+            for source, counts in sorted(stats["by_source"].items()):
+                pct = 100 * counts["valid"] / max(counts["total"], 1)
                 print(f"  {source}: {counts['valid']}/{counts['total']} ({pct:.1f}%)")
 
-        if stats['by_category']:
-            print(f"\nBreakdown by category:")
-            for category, counts in sorted(stats['by_category'].items()):
-                pct = 100 * counts['valid'] / max(counts['total'], 1)
+        if stats["by_category"]:
+            print("\nBreakdown by category:")
+            for category, counts in sorted(stats["by_category"].items()):
+                pct = 100 * counts["valid"] / max(counts["total"], 1)
                 print(f"  {category}: {counts['valid']}/{counts['total']} ({pct:.1f}%)")
 
-        if stats['errors']:
-            print(f"\nFirst 10 errors:")
-            for error in stats['errors'][:10]:
+        if stats["errors"]:
+            print("\nFirst 10 errors:")
+            for error in stats["errors"][:10]:
                 if isinstance(error, dict):
                     print(f"  {error['verse_id']}: {error['errors']}")
                 else:
                     print(f"  {error}")
 
-        print("="*60)
+        print("=" * 60)

@@ -1,7 +1,6 @@
 """Utilities for Devanagari Unicode normalization and handling."""
 
 import unicodedata
-from typing import Optional
 
 
 def normalize_devanagari(text: str) -> str:
@@ -18,7 +17,7 @@ def normalize_devanagari(text: str) -> str:
         return text
 
     # Normalize to NFC (canonical decomposition, followed by canonical composition)
-    normalized = unicodedata.normalize('NFC', text)
+    normalized = unicodedata.normalize("NFC", text)
     return normalized
 
 
@@ -42,9 +41,11 @@ def validate_devanagari(text: str) -> bool:
     for char in text:
         code = ord(char)
         # Allow Latin, numbers, spaces, punctuation, and Devanagari
-        if (devanagari_start <= code <= devanagari_end or
-            code < 128 or  # ASCII
-            code >= 0x2000):  # General punctuation and beyond
+        if (
+            devanagari_start <= code <= devanagari_end
+            or code < 128  # ASCII
+            or code >= 0x2000
+        ):  # General punctuation and beyond
             continue
 
     return True
@@ -64,15 +65,12 @@ def remove_diacritics(text: str) -> str:
         return text
 
     # NFD decomposes characters into base + combining marks
-    nfd_form = unicodedata.normalize('NFD', text)
+    nfd_form = unicodedata.normalize("NFD", text)
 
     # Filter out combining marks (category Mn = Nonspacing_Mark)
-    without_diacritics = ''.join(
-        char for char in nfd_form
-        if unicodedata.category(char) != 'Mn'
-    )
+    without_diacritics = "".join(char for char in nfd_form if unicodedata.category(char) != "Mn")
 
-    return unicodedata.normalize('NFC', without_diacritics)
+    return unicodedata.normalize("NFC", without_diacritics)
 
 
 def is_devanagari_char(char: str) -> bool:
@@ -101,11 +99,8 @@ def transliterate_itrans_to_unicode(itrans_text: str) -> str:
     # indic-transliteration library for proper conversion
     try:
         from indic_transliteration import sanscript
-        return sanscript.transliterate(
-            itrans_text,
-            sanscript.ITRANS,
-            sanscript.DEVANAGARI
-        )
+
+        return sanscript.transliterate(itrans_text, sanscript.ITRANS, sanscript.DEVANAGARI)
     except ImportError:
         # Fallback: return original if library not available
         return itrans_text

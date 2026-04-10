@@ -1,0 +1,2 @@
+# Dev: pip install ruff  OR  pip install -e ".[dev]" if the project is installed as a package
+ruff>=0.8.0

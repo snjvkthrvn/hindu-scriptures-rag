@@ -1,18 +1,18 @@
 """Verse boundary detection and numbering utilities."""
 
 import re
-from typing import List, Tuple, Optional
 from dataclasses import dataclass
 
 
 @dataclass
 class VerseMarker:
     """Represents a detected verse marker."""
+
     text: str
     position: int
     format_type: str  # 'devanagari', 'decimal', 'roman', 'bracket', etc.
-    chapter: Optional[int] = None
-    verse: Optional[int] = None
+    chapter: int | None = None
+    verse: int | None = None
 
 
 class VerseDetector:
@@ -21,17 +21,17 @@ class VerseDetector:
     def __init__(self):
         """Initialize verse patterns."""
         # Devanagari verse markers: ॥1॥, ॥१॥
-        self.devanagari_pattern = r'॥([०-९]+)॥'
+        self.devanagari_pattern = r"॥([०-९]+)॥"
 
         # Decimal verse markers: 1.1, 1:1, [1], (1), etc.
-        self.decimal_pattern = r'(?:^|\s)(\d+)[:.]\s*(\d+)(?:\s|$)'
-        self.bracket_pattern = r'\[(\d+)\]'
-        self.paren_pattern = r'\((\d+)\)'
+        self.decimal_pattern = r"(?:^|\s)(\d+)[:.]\s*(\d+)(?:\s|$)"
+        self.bracket_pattern = r"\[(\d+)\]"
+        self.paren_pattern = r"\((\d+)\)"
 
         # Roman numerals: I, II, III, etc.
-        self.roman_pattern = r'(?:^|\s)([ivxlcdm]+)(?:\s|$)'
+        self.roman_pattern = r"(?:^|\s)([ivxlcdm]+)(?:\s|$)"
 
-    def detect_devanagari_markers(self, text: str) -> List[VerseMarker]:
+    def detect_devanagari_markers(self, text: str) -> list[VerseMarker]:
         """Detect Devanagari verse markers (॥)."""
         markers = []
         for match in re.finditer(self.devanagari_pattern, text):
@@ -39,54 +39,60 @@ class VerseDetector:
             verse_text = match.group(1)
             try:
                 verse_num = self._devanagari_to_int(verse_text)
-                markers.append(VerseMarker(
-                    text=match.group(0),
-                    position=match.start(),
-                    format_type='devanagari',
-                    verse=verse_num
-                ))
+                markers.append(
+                    VerseMarker(
+                        text=match.group(0),
+                        position=match.start(),
+                        format_type="devanagari",
+                        verse=verse_num,
+                    )
+                )
             except ValueError:
                 pass
 
         return markers
 
-    def detect_decimal_markers(self, text: str) -> List[VerseMarker]:
+    def detect_decimal_markers(self, text: str) -> list[VerseMarker]:
         """Detect decimal verse markers (1.1, 1:1)."""
         markers = []
         for match in re.finditer(self.decimal_pattern, text, re.MULTILINE):
             try:
                 chapter = int(match.group(1))
                 verse = int(match.group(2))
-                markers.append(VerseMarker(
-                    text=match.group(0),
-                    position=match.start(),
-                    format_type='decimal',
-                    chapter=chapter,
-                    verse=verse
-                ))
+                markers.append(
+                    VerseMarker(
+                        text=match.group(0),
+                        position=match.start(),
+                        format_type="decimal",
+                        chapter=chapter,
+                        verse=verse,
+                    )
+                )
             except ValueError:
                 pass
 
         return markers
 
-    def detect_bracket_markers(self, text: str) -> List[VerseMarker]:
+    def detect_bracket_markers(self, text: str) -> list[VerseMarker]:
         """Detect bracket verse markers [1]."""
         markers = []
         for match in re.finditer(self.bracket_pattern, text):
             try:
                 verse = int(match.group(1))
-                markers.append(VerseMarker(
-                    text=match.group(0),
-                    position=match.start(),
-                    format_type='bracket',
-                    verse=verse
-                ))
+                markers.append(
+                    VerseMarker(
+                        text=match.group(0),
+                        position=match.start(),
+                        format_type="bracket",
+                        verse=verse,
+                    )
+                )
             except ValueError:
                 pass
 
         return markers
 
-    def detect_all_markers(self, text: str) -> List[VerseMarker]:
+    def detect_all_markers(self, text: str) -> list[VerseMarker]:
         """Detect all verse marker types."""
         all_markers = []
         all_markers.extend(self.detect_devanagari_markers(text))
@@ -96,7 +102,7 @@ class VerseDetector:
         # Sort by position
         return sorted(all_markers, key=lambda m: m.position)
 
-    def split_by_verses(self, text: str) -> List[Tuple[str, Optional[VerseMarker]]]:
+    def split_by_verses(self, text: str) -> list[tuple[str, VerseMarker | None]]:
         """
         Split text into verses based on detected markers.
 
@@ -110,9 +116,9 @@ class VerseDetector:
         verses = []
         last_pos = 0
 
-        for i, marker in enumerate(markers):
+        for _i, marker in enumerate(markers):
             # Extract text before this marker
-            verse_text = text[last_pos:marker.position].strip()
+            verse_text = text[last_pos : marker.position].strip()
             if verse_text:
                 verses.append((verse_text, None))
 
@@ -130,22 +136,38 @@ class VerseDetector:
     def _devanagari_to_int(devanagari_str: str) -> int:
         """Convert Devanagari number string to integer."""
         mapping = {
-            '०': '0', '१': '1', '२': '2', '३': '3', '४': '4',
-            '५': '5', '६': '6', '७': '7', '८': '8', '९': '9'
+            "०": "0",
+            "१": "1",
+            "२": "2",
+            "३": "3",
+            "४": "4",
+            "५": "5",
+            "६": "6",
+            "७": "7",
+            "८": "8",
+            "९": "9",
         }
 
-        converted = ''.join(mapping.get(char, char) for char in devanagari_str)
+        converted = "".join(mapping.get(char, char) for char in devanagari_str)
         return int(converted)
 
     @staticmethod
     def _int_to_devanagari(num: int) -> str:
         """Convert integer to Devanagari number string."""
         mapping = {
-            '0': '०', '1': '१', '2': '२', '3': '३', '4': '४',
-            '5': '५', '6': '६', '7': '७', '8': '८', '9': '९'
+            "0": "०",
+            "1": "१",
+            "2": "२",
+            "3": "३",
+            "4": "४",
+            "5": "५",
+            "6": "६",
+            "7": "७",
+            "8": "८",
+            "9": "९",
         }
 
-        return ''.join(mapping.get(char, char) for char in str(num))
+        return "".join(mapping.get(char, char) for char in str(num))
 
 
 def is_verse_boundary(line: str) -> bool:
@@ -162,12 +184,12 @@ def is_verse_boundary(line: str) -> bool:
 
     # Check for various verse marker patterns
     patterns = [
-        r'^॥.*॥$',  # Devanagari markers
-        r'^\d+\.\d+$',  # 1.1 format
-        r'^\[\d+\]$',  # [1] format
-        r'^\(\d+\)$',  # (1) format
-        r'^verse\s+\d+', # "verse 1"
-        r'^sloka\s+\d+', # "sloka 1"
+        r"^॥.*॥$",  # Devanagari markers
+        r"^\d+\.\d+$",  # 1.1 format
+        r"^\[\d+\]$",  # [1] format
+        r"^\(\d+\)$",  # (1) format
+        r"^verse\s+\d+",  # "verse 1"
+        r"^sloka\s+\d+",  # "sloka 1"
     ]
 
     return any(re.match(pattern, line, re.IGNORECASE) for pattern in patterns)

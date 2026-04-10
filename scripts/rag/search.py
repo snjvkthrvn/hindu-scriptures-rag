@@ -3,10 +3,9 @@
 Returns structured results ready for the LLM context window.
 """
 
-from qdrant_client import models
-
 from config import RAGConfig
 from embeddings import CohereEmbedder
+from qdrant_client import models
 from vector_store import QdrantStore
 
 # Module-level caches keyed by config values — avoid re-creating clients on
@@ -228,11 +227,13 @@ def search_with_context_expansion(
                 expanded.append(r)
 
     # Step 3: sort into reading order
-    expanded.sort(key=lambda r: (
-        r.get("source_text", ""),
-        r.get("chapter") or 0,
-        r.get("verse_num") or 0,
-    ))
+    expanded.sort(
+        key=lambda r: (
+            r.get("source_text", ""),
+            r.get("chapter") or 0,
+            r.get("verse_num") or 0,
+        )
+    )
 
     return expanded
 

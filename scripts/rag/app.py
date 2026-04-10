@@ -8,17 +8,14 @@ Usage:
 import json
 import os
 import secrets
-import sys
 import threading
 from dataclasses import replace
-from pathlib import Path
-
-from flask import Flask, Response, jsonify, render_template, request, stream_with_context
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 from auth_backend import register_auth
-from config import RAGConfig, PROJECT_ROOT
+from config import PROJECT_ROOT, RAGConfig
+from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 from voices import VOICES
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
@@ -32,6 +29,7 @@ def _warmup_rag() -> None:
         return
     try:
         from search import warmup
+
         warmup(RAGConfig())
     except Exception:
         pass
@@ -124,43 +122,49 @@ def api_query():
         # RRF fusion scores are small fractions; show ordinal relevance rank instead
         similarity = round((1 - (i / total_sources)) * 100, 1)
 
-        sources.append({
-            "header": header,
-            "sanskrit": src.get("sanskrit", ""),
-            "transliteration": src.get("transliteration", ""),
-            "translation": src.get("translation", ""),
-            "commentary_text": src.get("commentary_text", ""),
-            "author": src.get("author", ""),
-            "chunk_type": src.get("chunk_type", "verse"),
-            "metadata": {
-                "source_text": src.get("source_text", ""),
-                "category": src.get("category", ""),
-                "tradition": src.get("tradition", ""),
-                "chapter": src.get("chapter", 0),
-                "verse": src.get("verse_num", 0),
-            },
-            "similarity": similarity,
-        })
+        sources.append(
+            {
+                "header": header,
+                "sanskrit": src.get("sanskrit", ""),
+                "transliteration": src.get("transliteration", ""),
+                "translation": src.get("translation", ""),
+                "commentary_text": src.get("commentary_text", ""),
+                "author": src.get("author", ""),
+                "chunk_type": src.get("chunk_type", "verse"),
+                "metadata": {
+                    "source_text": src.get("source_text", ""),
+                    "category": src.get("category", ""),
+                    "tradition": src.get("tradition", ""),
+                    "chapter": src.get("chapter", 0),
+                    "verse": src.get("verse_num", 0),
+                },
+                "similarity": similarity,
+            }
+        )
 
-    return jsonify({
-        "answer": result["answer"],
-        "sources": sources,
-    })
+    return jsonify(
+        {
+            "answer": result["answer"],
+            "sources": sources,
+        }
+    )
 
 
 @app.route("/api/voices")
 def api_voices():
-    return jsonify({
-        key: {"name": v["name"], "is_default": v.get("is_default", False)}
-        for key, v in VOICES.items()
-    })
+    return jsonify(
+        {
+            key: {"name": v["name"], "is_default": v.get("is_default", False)}
+            for key, v in VOICES.items()
+        }
+    )
 
 
 @app.route("/api/agent", methods=["POST"])
 def api_agent():
     """Agentic RAG query — Claude reasons, calls tools, synthesizes."""
-    from agent.react_loop import run_agent
     from agent.conversation import ConversationMemory
+    from agent.react_loop import run_agent
 
     data = request.get_json(silent=True) or {}
     question = (data.get("question") or "").strip()
@@ -203,7 +207,10 @@ def api_agent_stream():
     def event_stream():
         try:
             for event in run_agent_stream(
-                question, config=config, history=history, voice=voice,
+                question,
+                config=config,
+                history=history,
+                voice=voice,
             ):
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception as e:

@@ -9,16 +9,14 @@ Structure: Books I–VI, each with Cantos. Verses are in tei-lg/tei-l divs.
 Output: JSON in the same schema as Rigveda (id, source, content, metadata, provenance).
 """
 
-import re
 import json
-from pathlib import Path
-from datetime import datetime, timezone
-from typing import List, Dict, Optional, Tuple
+import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
-
 
 BASE_URL = "https://www.gutenberg.org/cache/epub/24869/pg24869-images.html"
 
@@ -36,6 +34,7 @@ BOOK_NAMES = {
 @dataclass
 class RamayanaVerse:
     """A single verse (stanza) from the Ramayana."""
+
     book: int
     canto: int
     canto_name: str
@@ -46,9 +45,9 @@ class RamayanaVerse:
 def _clean_text(text: str) -> str:
     """Remove footnote refs, extra whitespace."""
     # Strip superscript numbers that are footnote refs
-    text = re.sub(r'\s*\d+\s*$', '', text)
-    text = re.sub(r'^\s*\d+\s*', '', text)
-    return ' '.join(text.split()).strip()
+    text = re.sub(r"\s*\d+\s*$", "", text)
+    text = re.sub(r"^\s*\d+\s*", "", text)
+    return " ".join(text.split()).strip()
 
 
 def _strip_footnotes(soup_element) -> str:
@@ -61,24 +60,26 @@ def _strip_footnotes(soup_element) -> str:
         a.decompose()
     raw = el.get_text(separator=" ", strip=True)
     # Remove any remaining orphaned footnote refs (e.g. trailing digits)
-    raw = re.sub(r'\s*\d+\s*$', '', raw)
+    raw = re.sub(r"\s*\d+\s*$", "", raw)
     return _clean_text(raw)
 
 
 def fetch_ramayana_html(url: str = BASE_URL) -> str:
     """Fetch the Ramayana HTML from Project Gutenberg."""
     session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Hindu Scriptures RAG; +https://github.com/hindu-scriptures-rag)",
-        "Accept": "text/html,application/xhtml+xml",
-    })
+    session.headers.update(
+        {
+            "User-Agent": "Mozilla/5.0 (Hindu Scriptures RAG; +https://github.com/hindu-scriptures-rag)",
+            "Accept": "text/html,application/xhtml+xml",
+        }
+    )
     resp = session.get(url, timeout=60)
     resp.raise_for_status()
     resp.encoding = resp.apparent_encoding or "utf-8"
     return resp.text
 
 
-def parse_ramayana(html: str) -> List[RamayanaVerse]:
+def parse_ramayana(html: str) -> list[RamayanaVerse]:
     """
     Parse Ramayana HTML and extract verses.
 
@@ -88,7 +89,9 @@ def parse_ramayana(html: str) -> List[RamayanaVerse]:
     verses = []
 
     # Find main text container
-    text_div = soup.find("div", class_=lambda c: c and "tei-text" in (c if isinstance(c, list) else [c]))
+    text_div = soup.find(
+        "div", class_=lambda c: c and "tei-text" in (c if isinstance(c, list) else [c])
+    )
     if not text_div:
         text_div = soup.find("body")
 
@@ -101,10 +104,10 @@ def parse_ramayana(html: str) -> List[RamayanaVerse]:
         nonlocal current_book, current_canto, current_canto_name
         txt = head_el.get_text(strip=True)
         # Remove trailing footnote numbers
-        txt = re.sub(r'\.?\d+\s*$', '', txt).strip()
+        txt = re.sub(r"\.?\d+\s*$", "", txt).strip()
 
         # Book I., BOOK II., etc.
-        book_match = re.match(r'^(?:BOOK\s+)?(?:Book\s+)?([IVXLCDM]+)\.?\s*$', txt, re.I)
+        book_match = re.match(r"^(?:BOOK\s+)?(?:Book\s+)?([IVXLCDM]+)\.?\s*$", txt, re.I)
         if book_match:
             current_book = _roman_to_int(book_match.group(1))
             current_canto = 0
@@ -112,7 +115,7 @@ def parse_ramayana(html: str) -> List[RamayanaVerse]:
             return
 
         # Canto I. Nárad., Canto II. Brahmá's Visit
-        canto_match = re.match(r'^Canto\s+([IVXLCDM]+)\.?\s*(.*)$', txt, re.I)
+        canto_match = re.match(r"^Canto\s+([IVXLCDM]+)\.?\s*(.*)$", txt, re.I)
         if canto_match:
             current_canto = _roman_to_int(canto_match.group(1))
             current_canto_name = canto_match.group(2).strip() if canto_match.group(2) else ""
@@ -127,7 +130,9 @@ def parse_ramayana(html: str) -> List[RamayanaVerse]:
     def process_stanza(lg_el):
         nonlocal verse_counter
         lines = []
-        for line_el in lg_el.find_all("div", class_=lambda c: c and "tei-l" in (c if isinstance(c, list) else [c])):
+        for line_el in lg_el.find_all(
+            "div", class_=lambda c: c and "tei-l" in (c if isinstance(c, list) else [c])
+        ):
             line_text = _strip_footnotes(line_el)
             if line_text:
                 lines.append(line_text)
@@ -141,13 +146,15 @@ def parse_ramayana(html: str) -> List[RamayanaVerse]:
         if not verse_text or len(verse_text) < 3:
             return
 
-        verses.append(RamayanaVerse(
-            book=current_book,
-            canto=current_canto,
-            canto_name=current_canto_name,
-            verse_num=verse_counter,
-            text=verse_text,
-        ))
+        verses.append(
+            RamayanaVerse(
+                book=current_book,
+                canto=current_canto,
+                canto_name=current_canto_name,
+                verse_num=verse_counter,
+                text=verse_text,
+            )
+        )
 
     # Walk the DOM in document order
     for el in text_div.find_all(["h1", "h2", "h3", "h4", "div"]):
@@ -176,10 +183,10 @@ def _roman_to_int(roman: str) -> int:
     return total
 
 
-def verses_to_json(verses: List[RamayanaVerse]) -> List[Dict]:
+def verses_to_json(verses: list[RamayanaVerse]) -> list[dict]:
     """Convert parsed verses to the project JSON schema."""
     # Reset verse numbering per canto for cleaner IDs
-    canto_verses: Dict[Tuple[int, int], int] = {}
+    canto_verses: dict[tuple[int, int], int] = {}
 
     result = []
     for v in verses:
@@ -190,47 +197,52 @@ def verses_to_json(verses: List[RamayanaVerse]) -> List[Dict]:
         verse_id = f"ram_{v.book}_{v.canto}_{verse_num}"
         book_name = BOOK_NAMES.get(v.book, f"Book {v.book}")
 
-        result.append({
-            "id": verse_id,
-            "source": {
-                "text": "Ramayana",
-                "book": v.book,
-                "book_name": book_name,
-                "canto": v.canto,
-                "canto_name": v.canto_name or "",
-                "verse": verse_num,
-            },
-            "content": {
-                "sanskrit": "",
-                "transliteration": "",
-                "translation": v.text,
-                "word_by_word": {},
-            },
-            "metadata": {
-                "category": "smriti",
-                "tradition": "itihasa",
-                "themes": ["ramayana"],
-                "philosophical_schools": [],
-            },
-            "commentaries": [],
-            "provenance": {
-                "download_source": "gutenberg",
-                "original_url": BASE_URL,
-                "translator": "Ralph T.H. Griffith",
-                "translation_year": "1870-1874",
-                "license": "Public Domain",
-                "processed_date": datetime.now(timezone.utc).isoformat(),
-            },
-        })
+        result.append(
+            {
+                "id": verse_id,
+                "source": {
+                    "text": "Ramayana",
+                    "book": v.book,
+                    "book_name": book_name,
+                    "canto": v.canto,
+                    "canto_name": v.canto_name or "",
+                    "verse": verse_num,
+                },
+                "content": {
+                    "sanskrit": "",
+                    "transliteration": "",
+                    "translation": v.text,
+                    "word_by_word": {},
+                },
+                "metadata": {
+                    "category": "smriti",
+                    "tradition": "itihasa",
+                    "themes": ["ramayana"],
+                    "philosophical_schools": [],
+                },
+                "commentaries": [],
+                "provenance": {
+                    "download_source": "gutenberg",
+                    "original_url": BASE_URL,
+                    "translator": "Ralph T.H. Griffith",
+                    "translation_year": "1870-1874",
+                    "license": "Public Domain",
+                    "processed_date": datetime.now(timezone.utc).isoformat(),
+                },
+            }
+        )
     return result
 
 
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="Download and parse Ramayana from Project Gutenberg")
+    parser = argparse.ArgumentParser(
+        description="Download and parse Ramayana from Project Gutenberg"
+    )
     parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         default="raw/gutenberg/ramayana.json",
         help="Output JSON file path",
     )

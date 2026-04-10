@@ -26,7 +26,6 @@ class EmbeddingProvider(Enum):
     COHERE = "cohere"
 
 
-
 @dataclass
 class RAGConfig:
     # --- Provider selection ---
@@ -55,9 +54,7 @@ class RAGConfig:
 
     # --- Qdrant ---
     # When set (e.g. "http://localhost:6333"), use Qdrant server (Docker). Else use local embedded storage.
-    qdrant_url: str | None = field(
-        default_factory=lambda: os.environ.get("QDRANT_URL") or None
-    )
+    qdrant_url: str | None = field(default_factory=lambda: os.environ.get("QDRANT_URL") or None)
     qdrant_api_key: str | None = field(
         default_factory=lambda: os.environ.get("QDRANT_API_KEY") or None
     )
@@ -71,7 +68,9 @@ class RAGConfig:
     anthropic_api_key: str = field(default_factory=lambda: os.environ.get("ANTHROPIC_API_KEY", ""))
 
     # --- Paths ---
-    verses_file: Path = field(default_factory=lambda: PROJECT_ROOT / "final" / "verses_enriched.json")
+    verses_file: Path = field(
+        default_factory=lambda: PROJECT_ROOT / "final" / "verses_enriched.json"
+    )
 
     # --- Retrieval settings ---
     top_k: int = 8

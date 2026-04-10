@@ -19,7 +19,7 @@ if _rag_dir not in sys.path:
     idx = sys.path.index(_eng_dir) + 1
     sys.path.insert(idx, _rag_dir)
 
-from config import RAGConfig, PROJECT_ROOT  # noqa: E402
+from config import RAGConfig  # noqa: E402
 
 ENGLISH_RAG_DIR = Path(__file__).resolve().parent
 ENGLISH_VERSES_FILE = ENGLISH_RAG_DIR / "verses_english_only.json"

@@ -61,15 +61,19 @@ def parse_mahabharata_ganguli(txt_path: Path) -> list[dict]:
         text = text.split(start_marker, 1)[1]
 
     # Find THE MAHABHARATA + first section
-    m = re.search(r"THE MAHABHARATA\s*\n\s*([^\n]+)\s*\n\s*SECTION\s+([IVXLCDM]+|\d+)\s*\n", text, re.IGNORECASE)
+    m = re.search(
+        r"THE MAHABHARATA\s*\n\s*([^\n]+)\s*\n\s*SECTION\s+([IVXLCDM]+|\d+)\s*\n",
+        text,
+        re.IGNORECASE,
+    )
     if m:
         default_parva = m.group(1).strip()
-        text = text[m.start():]
+        text = text[m.start() :]
     else:
         default_parva = "Adi Parva"
         sec1 = re.search(r"SECTION\s+([IVXLCDM]+|\d+)\s*\n", text, re.IGNORECASE)
         if sec1:
-            text = text[sec1.start():]
+            text = text[sec1.start() :]
 
     # Pre-scan all BOOK/PARVA headers with positions
     parvas = _prescan_parvas(text)
@@ -80,7 +84,7 @@ def parse_mahabharata_ganguli(txt_path: Path) -> list[dict]:
         section_num = _section_num(match.group(1))
         start = match.end()
         next_m = section_pat.search(text, start)
-        chunk = text[start: next_m.start()] if next_m else text[start:]
+        chunk = text[start : next_m.start()] if next_m else text[start:]
 
         # Look up parva name from pre-scanned positions
         current_parva = _lookup_parva(match.start(), parvas, default_parva)
@@ -108,32 +112,34 @@ def parse_mahabharata_ganguli(txt_path: Path) -> list[dict]:
         for pi, para in enumerate(cleaned):
             if len(para) < 20:
                 continue
-            verses.append({
-                "id": f"mbh_s{section_num}_v{pi + 1}",
-                "source": {
-                    "text": "Mahabharata",
-                    "chapter": section_num,
-                    "chapter_name": current_parva,
-                    "verse": pi + 1,
-                },
-                "content": {
-                    "sanskrit": "",
-                    "transliteration": "",
-                    "translation": para,
-                },
-                "metadata": {
-                    "category": "smriti",
-                    "tradition": "itihasa",
-                    "themes": ["mahabharata", "epic"],
-                },
-                "commentaries": [],
-                "provenance": {
-                    "download_source": "gutenberg",
-                    "original_url": "https://www.gutenberg.org/ebooks/15474",
-                    "license": "Public Domain",
-                    "translator": "Kisari Mohan Ganguli",
-                    "processed_date": datetime.now(timezone.utc).isoformat(),
-                },
-            })
+            verses.append(
+                {
+                    "id": f"mbh_s{section_num}_v{pi + 1}",
+                    "source": {
+                        "text": "Mahabharata",
+                        "chapter": section_num,
+                        "chapter_name": current_parva,
+                        "verse": pi + 1,
+                    },
+                    "content": {
+                        "sanskrit": "",
+                        "transliteration": "",
+                        "translation": para,
+                    },
+                    "metadata": {
+                        "category": "smriti",
+                        "tradition": "itihasa",
+                        "themes": ["mahabharata", "epic"],
+                    },
+                    "commentaries": [],
+                    "provenance": {
+                        "download_source": "gutenberg",
+                        "original_url": "https://www.gutenberg.org/ebooks/15474",
+                        "license": "Public Domain",
+                        "translator": "Kisari Mohan Ganguli",
+                        "processed_date": datetime.now(timezone.utc).isoformat(),
+                    },
+                }
+            )
 
     return verses

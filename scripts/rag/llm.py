@@ -7,7 +7,6 @@ Supports:
 """
 
 import anthropic
-
 from config import RAGConfig
 
 
@@ -48,9 +47,7 @@ def generate(
     )
 
     # Extract text from content blocks
-    return "".join(
-        block.text for block in response.content if block.type == "text"
-    )
+    return "".join(block.text for block in response.content if block.type == "text")
 
 
 def generate_haiku(
@@ -76,9 +73,7 @@ def generate_haiku(
         system=system,
         messages=messages,
     )
-    return "".join(
-        block.text for block in response.content if block.type == "text"
-    )
+    return "".join(block.text for block in response.content if block.type == "text")
 
 
 def generate_with_tools(
@@ -128,5 +123,4 @@ def generate_stream(
         system=system,
         messages=messages,
     ) as stream:
-        for text in stream.text_stream:
-            yield text
+        yield from stream.text_stream

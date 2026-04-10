@@ -94,7 +94,11 @@ def main():
             elif len(parts) == 3:
                 field = parts[1].lower()
                 value = parts[2]
-                valid_fields = {"source": "source_text", "category": "category", "tradition": "tradition"}
+                valid_fields = {
+                    "source": "source_text",
+                    "category": "category",
+                    "tradition": "tradition",
+                }
                 if field in valid_fields:
                     filter_dict[valid_fields[field]] = value
                     print(f"Filter set: {field} = {value}")
@@ -112,6 +116,7 @@ def main():
             print("\nAgent is thinking...")
             try:
                 from agent.react_loop import run_agent
+
                 result = run_agent(user_input, config=config)
             except Exception as e:
                 print(f"\nError: {e}")

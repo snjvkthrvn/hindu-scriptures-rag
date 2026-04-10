@@ -88,13 +88,20 @@
     color-scheme: dark;
 }
 
-html { font-size: 16px; scroll-behavior: smooth; }
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
 
 body {
     font-family: var(--font-body);
     color: var(--text);
     background: var(--parchment);
     min-height: 100vh;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
     line-height: 1.7;
     overflow: hidden;
     transition: background-color 0.4s var(--ease-out-expo), color 0.4s var(--ease-out-expo);
@@ -122,9 +129,13 @@ body::before {
     flex-direction: column;
     height: 100vh;
     height: 100dvh;
+    height: -webkit-fill-available;
     max-width: 860px;
     margin: 0 auto;
     position: relative;
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     /* Header breakpoints must follow this width, not the viewport — the shell is
        always ≤860px even on ultrawide monitors, so viewport media queries miss. */
     container-type: inline-size;
@@ -136,18 +147,19 @@ body::before {
    ========================================================================== */
 .chat-header {
     flex-shrink: 0;
-    height: var(--header-h);
+    min-height: var(--header-h);
+    height: auto;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     column-gap: 0.5rem;
-    padding: 0 1.25rem;
+    padding: 0.35rem 1.25rem;
     background: var(--header-bg);
     color: var(--header-text);
     border-bottom: 2px solid var(--gold);
     z-index: 10;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 .chat-header::after {
     content: "";
@@ -202,12 +214,14 @@ body::before {
 .header-right {
     display: flex;
     align-items: center;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-content: center;
     gap: 0.35rem;
     flex-shrink: 0;
     min-width: 0;
     max-width: 100%;
-    overflow: hidden;
+    overflow: visible;
 }
 .corpus-badge {
     font-size: 0.58rem;
@@ -233,6 +247,8 @@ body::before {
     white-space: nowrap;
     flex-shrink: 0;
     line-height: 1.2;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 .header-btn:hover {
     background: rgba(240, 215, 140, 0.14);
@@ -246,11 +262,13 @@ body::before {
 .header-auth {
     display: flex;
     flex-direction: row;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     align-items: center;
     gap: 0.3rem;
     min-width: 0;
-    overflow: hidden;
+    max-width: 100%;
+    overflow: visible;
 }
 .header-auth .auth-guest-hint {
     padding: 0.15rem 0.4rem;
@@ -279,6 +297,8 @@ body::before {
     flex-shrink: 0;
     transition: all 0.3s var(--ease-out-expo);
     padding: 0;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 .theme-toggle:hover {
     background: rgba(240, 215, 140, 0.14);
@@ -299,6 +319,7 @@ body::before {
     z-index: 100;
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
     transition: opacity 0.35s var(--ease-out-expo), visibility 0.35s;
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
@@ -306,6 +327,7 @@ body::before {
 .drawer-overlay.open {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
 }
 .drawer-panel {
     position: fixed;
@@ -852,7 +874,7 @@ body::before {
    ========================================================================== */
 .chat-input-bar {
     flex-shrink: 0;
-    padding: 0.75rem 1rem 0.65rem;
+    padding: 0.75rem 1rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
     background: var(--parchment);
     border-top: 1px solid var(--border);
 }
@@ -1113,9 +1135,30 @@ body::before {
     .theme-toggle { width: 24px; height: 24px; font-size: 0.8rem; }
 }
 
+/* Viewport fallbacks when @container is unsupported (Safari < 16). */
+@media (max-width: 900px) {
+    .corpus-badge { display: none; }
+}
+@media (max-width: 780px) {
+    .header-auth .auth-guest-hint { display: none; }
+}
+@media (max-width: 720px) {
+    #signupBtn { display: none; }
+}
+@media (max-width: 520px) {
+    #newChatBtn { display: none; }
+}
+
 /* --- Body / welcome (viewport) --- */
 @media (max-width: 640px) {
     .app-shell { max-width: 100%; }
+
+    .chat-header { padding: 0 0.75rem; }
+    .header-title { font-size: 0.9rem; }
+    .header-sub { display: none; }
+    .header-om { font-size: 1.5rem; }
+    .theme-toggle { width: 26px; height: 26px; font-size: 0.85rem; }
+
     .chat-messages { padding: 1rem 0.65rem; }
     .msg-bubble { max-width: 95%; }
     .msg-avatar { width: 28px; height: 28px; font-size: 0.95rem; }
@@ -1130,6 +1173,19 @@ body::before {
     .msg-content { padding: 0.8rem 0.9rem; font-size: 0.95rem; }
     .source-card { padding: 0.55rem 0.7rem; }
     .input-hint { font-size: 0.65rem; }
+    .chat-input-bar {
+        padding: 0.75rem 0.65rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+@media (max-width: 400px) {
+    .chat-header { padding: 0 0.5rem; column-gap: 0.3rem; }
+    .header-left { gap: 0.35rem; }
+    .header-om { font-size: 1.3rem; }
+    .header-title { font-size: 0.78rem; letter-spacing: 0.03em; }
+    .header-right { gap: 0.2rem; }
+    #settingsBtn { padding: 0.2rem 0.3rem; }
+    .theme-toggle { width: 24px; height: 24px; font-size: 0.8rem; }
 }
 
 @media (min-width: 861px) {

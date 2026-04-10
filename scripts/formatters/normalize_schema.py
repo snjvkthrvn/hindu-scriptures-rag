@@ -1,10 +1,11 @@
 """Normalize parsed verses to unified JSON schema."""
 
 import json
-from pathlib import Path
-from typing import List, Dict, Any
-from datetime import datetime
 import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.unicode_utils import normalize_devanagari
@@ -13,25 +14,25 @@ from utils.unicode_utils import normalize_devanagari
 class SchemaNormalizer:
     """Normalize verses to unified schema."""
 
-    REQUIRED_TOP_LEVEL = {'id', 'source', 'content', 'metadata', 'provenance'}
-    REQUIRED_SOURCE = {'text', 'chapter', 'verse'}
-    REQUIRED_CONTENT = {'sanskrit', 'transliteration', 'translation'}
-    REQUIRED_METADATA = {'category', 'tradition', 'themes', 'philosophical_schools'}
+    REQUIRED_TOP_LEVEL = {"id", "source", "content", "metadata", "provenance"}
+    REQUIRED_SOURCE = {"text", "chapter", "verse"}
+    REQUIRED_CONTENT = {"sanskrit", "transliteration", "translation"}
+    REQUIRED_METADATA = {"category", "tradition", "themes", "philosophical_schools"}
 
     @classmethod
-    def normalize_verse(cls, verse: Dict[str, Any]) -> Dict[str, Any]:
+    def normalize_verse(cls, verse: dict[str, Any]) -> dict[str, Any]:
         """
         Normalize a verse to the unified schema.
 
         Fills in missing fields with defaults and ensures all required fields exist.
         """
         normalized = {
-            'id': cls._ensure_verse_id(verse.get('id')),
-            'source': cls._normalize_source(verse.get('source', {})),
-            'content': cls._normalize_content(verse.get('content', {})),
-            'metadata': cls._normalize_metadata(verse.get('metadata', {})),
-            'commentaries': verse.get('commentaries', []),
-            'provenance': cls._normalize_provenance(verse.get('provenance', {}))
+            "id": cls._ensure_verse_id(verse.get("id")),
+            "source": cls._normalize_source(verse.get("source", {})),
+            "content": cls._normalize_content(verse.get("content", {})),
+            "metadata": cls._normalize_metadata(verse.get("metadata", {})),
+            "commentaries": verse.get("commentaries", []),
+            "provenance": cls._normalize_provenance(verse.get("provenance", {})),
         }
 
         return normalized
@@ -45,65 +46,65 @@ class SchemaNormalizer:
         return f"verse_{datetime.now().timestamp()}"
 
     @classmethod
-    def _normalize_source(cls, source: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_source(cls, source: dict[str, Any]) -> dict[str, Any]:
         """Normalize source metadata."""
         return {
-            'text': str(source.get('text', 'Unknown')),
-            'chapter': source.get('chapter', None),
-            'chapter_name': source.get('chapter_name'),
-            'verse': source.get('verse', 0),
-            'section': source.get('section')
+            "text": str(source.get("text", "Unknown")),
+            "chapter": source.get("chapter", None),
+            "chapter_name": source.get("chapter_name"),
+            "verse": source.get("verse", 0),
+            "section": source.get("section"),
         }
 
     @classmethod
-    def _normalize_content(cls, content: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_content(cls, content: dict[str, Any]) -> dict[str, Any]:
         """Normalize verse content."""
-        sanskrit = str(content.get('sanskrit', '')).strip()
-        transliteration = str(content.get('transliteration', '')).strip()
-        translation = str(content.get('translation', '')).strip()
+        sanskrit = str(content.get("sanskrit", "")).strip()
+        transliteration = str(content.get("transliteration", "")).strip()
+        translation = str(content.get("translation", "")).strip()
 
         # Normalize Sanskrit
         if sanskrit:
             sanskrit = normalize_devanagari(sanskrit)
 
         return {
-            'sanskrit': sanskrit,
-            'transliteration': transliteration,
-            'translation': translation,
-            'word_by_word': content.get('word_by_word', {})
+            "sanskrit": sanskrit,
+            "transliteration": transliteration,
+            "translation": translation,
+            "word_by_word": content.get("word_by_word", {}),
         }
 
     @classmethod
-    def _normalize_metadata(cls, metadata: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_metadata(cls, metadata: dict[str, Any]) -> dict[str, Any]:
         """Normalize metadata."""
-        themes = metadata.get('themes', [])
+        themes = metadata.get("themes", [])
         if isinstance(themes, str):
-            themes = [t.strip() for t in themes.split(',')]
+            themes = [t.strip() for t in themes.split(",")]
         elif not isinstance(themes, list):
             themes = []
 
-        schools = metadata.get('philosophical_schools', [])
+        schools = metadata.get("philosophical_schools", [])
         if isinstance(schools, str):
-            schools = [s.strip() for s in schools.split(',')]
+            schools = [s.strip() for s in schools.split(",")]
         elif not isinstance(schools, list):
             schools = []
 
         return {
-            'category': str(metadata.get('category', 'prakarana')).lower(),
-            'tradition': str(metadata.get('tradition', 'common')).lower(),
-            'themes': [t.lower().replace(' ', '_') for t in themes if t],
-            'philosophical_schools': [s.lower().replace(' ', '_') for s in schools if s],
-            'life_domains': metadata.get('life_domains', [])
+            "category": str(metadata.get("category", "prakarana")).lower(),
+            "tradition": str(metadata.get("tradition", "common")).lower(),
+            "themes": [t.lower().replace(" ", "_") for t in themes if t],
+            "philosophical_schools": [s.lower().replace(" ", "_") for s in schools if s],
+            "life_domains": metadata.get("life_domains", []),
         }
 
     @classmethod
-    def _normalize_provenance(cls, provenance: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_provenance(cls, provenance: dict[str, Any]) -> dict[str, Any]:
         """Normalize provenance information."""
         return {
-            'download_source': str(provenance.get('download_source', 'unknown')),
-            'original_url': str(provenance.get('original_url', '')),
-            'license': str(provenance.get('license', 'Unknown')),
-            'processed_date': str(provenance.get('processed_date', datetime.now().isoformat()))
+            "download_source": str(provenance.get("download_source", "unknown")),
+            "original_url": str(provenance.get("original_url", "")),
+            "license": str(provenance.get("license", "Unknown")),
+            "processed_date": str(provenance.get("processed_date", datetime.now().isoformat())),
         }
 
 
@@ -111,29 +112,29 @@ class VerseValidator:
     """Validate normalized verses."""
 
     @staticmethod
-    def is_valid(verse: Dict[str, Any]) -> bool:
+    def is_valid(verse: dict[str, Any]) -> bool:
         """Check if verse meets minimum validity requirements."""
         # Must have ID
-        if not verse.get('id'):
+        if not verse.get("id"):
             return False
 
         # Must have source text
-        if not verse.get('source', {}).get('text'):
+        if not verse.get("source", {}).get("text"):
             return False
 
         # Must have translation
-        if not verse.get('content', {}).get('translation'):
+        if not verse.get("content", {}).get("translation"):
             return False
 
         # Should have at least Sanskrit or translation
-        content = verse.get('content', {})
-        if not content.get('sanskrit') and not content.get('translation'):
+        content = verse.get("content", {})
+        if not content.get("sanskrit") and not content.get("translation"):
             return False
 
         return True
 
 
-def process_directory(input_dir: Path, output_file: Path) -> Dict[str, Any]:
+def process_directory(input_dir: Path, output_file: Path) -> dict[str, Any]:
     """
     Process all JSON files in input directory and normalize to unified schema.
 
@@ -141,28 +142,23 @@ def process_directory(input_dir: Path, output_file: Path) -> Dict[str, Any]:
         Statistics about the normalization
     """
     all_verses = []
-    stats = {
-        'total_input': 0,
-        'total_output': 0,
-        'invalid_verses': 0,
-        'by_category': {}
-    }
+    stats = {"total_input": 0, "total_output": 0, "invalid_verses": 0, "by_category": {}}
 
     # Load all JSON files
-    json_files = list(input_dir.glob('*.json'))
+    json_files = list(input_dir.glob("*.json"))
     print(f"Found {len(json_files)} JSON files to process")
 
     for json_file in json_files:
         print(f"\nProcessing {json_file.name}...")
         try:
-            with open(json_file, 'r', encoding='utf-8') as f:
+            with open(json_file, encoding="utf-8") as f:
                 data = json.load(f)
 
             if not isinstance(data, list):
                 data = [data]
 
             for verse in data:
-                stats['total_input'] += 1
+                stats["total_input"] += 1
 
                 # Normalize
                 normalized = SchemaNormalizer.normalize_verse(verse)
@@ -170,15 +166,15 @@ def process_directory(input_dir: Path, output_file: Path) -> Dict[str, Any]:
                 # Validate
                 if VerseValidator.is_valid(normalized):
                     all_verses.append(normalized)
-                    stats['total_output'] += 1
+                    stats["total_output"] += 1
 
                     # Track by category
-                    category = normalized.get('metadata', {}).get('category', 'unknown')
-                    if category not in stats['by_category']:
-                        stats['by_category'][category] = 0
-                    stats['by_category'][category] += 1
+                    category = normalized.get("metadata", {}).get("category", "unknown")
+                    if category not in stats["by_category"]:
+                        stats["by_category"][category] = 0
+                    stats["by_category"][category] += 1
                 else:
-                    stats['invalid_verses'] += 1
+                    stats["invalid_verses"] += 1
 
         except json.JSONDecodeError as e:
             print(f"  JSON error: {e}")
@@ -187,17 +183,17 @@ def process_directory(input_dir: Path, output_file: Path) -> Dict[str, Any]:
 
     # Save normalized verses
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(all_verses, f, ensure_ascii=False, indent=2)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("NORMALIZATION SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Input verses: {stats['total_input']}")
     print(f"Output verses: {stats['total_output']}")
     print(f"Invalid verses: {stats['invalid_verses']}")
-    print(f"By category:")
-    for category, count in sorted(stats['by_category'].items()):
+    print("By category:")
+    for category, count in sorted(stats["by_category"].items()):
         print(f"  {category}: {count}")
     print(f"\nOutput: {output_file}")
 
@@ -210,14 +206,14 @@ def main():
 
     parser = argparse.ArgumentParser(description="Normalize verses to unified schema")
     parser.add_argument(
-        '--input-dir',
-        default='~/hindu-scriptures-rag/processed',
-        help='Input directory with parsed JSON files'
+        "--input-dir",
+        default="~/hindu-scriptures-rag/processed",
+        help="Input directory with parsed JSON files",
     )
     parser.add_argument(
-        '--output',
-        default='~/hindu-scriptures-rag/final/verses.json',
-        help='Output file for normalized verses'
+        "--output",
+        default="~/hindu-scriptures-rag/final/verses.json",
+        help="Output file for normalized verses",
     )
 
     args = parser.parse_args()
@@ -231,5 +227,5 @@ def main():
     process_directory(input_dir, output_file)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

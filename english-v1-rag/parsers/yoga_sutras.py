@@ -42,32 +42,34 @@ def parse_yoga_sutras_html(html_path: Path) -> list[dict]:
             continue
         seen.add(key)
 
-        verses.append({
-            "id": f"ys_{chapter}_{sutra}",
-            "source": {
-                "text": "Yoga Sutras of Patanjali",
-                "chapter": chapter,
-                "chapter_name": CHAPTER_NAMES.get(chapter, f"Part {chapter}"),
-                "verse": sutra,
-            },
-            "content": {
-                "sanskrit": "",
-                "transliteration": "",
-                "translation": trans,
-            },
-            "metadata": {
-                "category": "smriti",
-                "tradition": "yoga",
-                "themes": ["yoga", "patanjali", "meditation"],
-            },
-            "commentaries": [],
-            "provenance": {
-                "download_source": "sacred-texts",
-                "original_url": "https://sacred-texts.com/hin/yogasutr.htm",
-                "license": "Public Domain",
-                "translator": "BonGiovanni",
-                "processed_date": datetime.now(timezone.utc).isoformat(),
-            },
-        })
+        verses.append(
+            {
+                "id": f"ys_{chapter}_{sutra}",
+                "source": {
+                    "text": "Yoga Sutras of Patanjali",
+                    "chapter": chapter,
+                    "chapter_name": CHAPTER_NAMES.get(chapter, f"Part {chapter}"),
+                    "verse": sutra,
+                },
+                "content": {
+                    "sanskrit": "",
+                    "transliteration": "",
+                    "translation": trans,
+                },
+                "metadata": {
+                    "category": "smriti",
+                    "tradition": "yoga",
+                    "themes": ["yoga", "patanjali", "meditation"],
+                },
+                "commentaries": [],
+                "provenance": {
+                    "download_source": "sacred-texts",
+                    "original_url": "https://sacred-texts.com/hin/yogasutr.htm",
+                    "license": "Public Domain",
+                    "translator": "BonGiovanni",
+                    "processed_date": datetime.now(timezone.utc).isoformat(),
+                },
+            }
+        )
 
     return verses

@@ -8,11 +8,12 @@ Usage:
     answer = query_rag("What does the Bhagavad Gita say about duty?")
 """
 
-from config import RAGConfig, LLMProvider
-from search import search, format_context
-from prompt_templates import SYSTEM_PROMPT, QUERY_PROMPT_TEMPLATE
-from sanskrit_gloss import augment_context_with_sanskrit_gloss
 import llm as llm_module
+from config import LLMProvider, RAGConfig
+from sanskrit_gloss import augment_context_with_sanskrit_gloss
+from search import format_context, search
+
+from prompt_templates import QUERY_PROMPT_TEMPLATE, SYSTEM_PROMPT
 
 
 def query_rag(
@@ -50,21 +51,24 @@ def query_rag(
         )
     elif config.llm_provider == LLMProvider.OLLAMA:
         # Fallback to Ollama via LangChain
+        from langchain_core.messages import HumanMessage, SystemMessage
         from langchain_ollama import ChatOllama
-        from langchain_core.messages import SystemMessage, HumanMessage
 
         ollama = ChatOllama(
             model=config.ollama_model,
             base_url=config.ollama_base_url,
             temperature=config.temperature,
         )
-        response = ollama.invoke([
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(content=user_prompt),
-        ])
+        response = ollama.invoke(
+            [
+                SystemMessage(content=SYSTEM_PROMPT),
+                HumanMessage(content=user_prompt),
+            ]
+        )
         answer = response.content
     elif config.llm_provider == LLMProvider.OPENAI:
         from openai import OpenAI
+
         client = OpenAI(api_key=config.openai_api_key)
         resp = client.chat.completions.create(
             model=config.openai_model,

@@ -5,18 +5,15 @@ Uses Qdrant server (Docker) when QDRANT_URL is set, else runs in-process local s
 
 import hashlib
 
+from config import RAGConfig
 from qdrant_client import QdrantClient, models
 from qdrant_client.models import (
     Distance,
-    NamedSparseVector,
-    NamedVector,
     PointStruct,
     SparseVector,
-    VectorParams,
     SparseVectorParams,
+    VectorParams,
 )
-
-from config import RAGConfig
 
 
 def _stable_id(point_id: str) -> int:
@@ -55,6 +52,7 @@ class QdrantStore:
         """Lazy-load fastembed BM25 encoder."""
         if self._bm25_encoder is None:
             from fastembed import SparseTextEmbedding
+
             self._bm25_encoder = SparseTextEmbedding(model_name="Qdrant/bm25")
         return self._bm25_encoder
 
@@ -79,8 +77,14 @@ class QdrantStore:
 
         # Create payload indexes for efficient filtered search
         for field_name in [
-            "source_text", "chunk_type", "category", "tradition",
-            "school", "author", "verse_id", "schools",
+            "source_text",
+            "chunk_type",
+            "category",
+            "tradition",
+            "school",
+            "author",
+            "verse_id",
+            "schools",
         ]:
             self.client.create_payload_index(
                 collection_name=self.collection,
@@ -117,17 +121,19 @@ class QdrantStore:
         points = []
         for i, point_id in enumerate(ids):
             sparse_emb = sparse_embeddings[i]
-            points.append(PointStruct(
-                id=_stable_id(point_id),  # Deterministic int64 from SHA-256
-                vector={
-                    "dense": dense_vectors[i],
-                    "sparse": SparseVector(
-                        indices=sparse_emb.indices.tolist(),
-                        values=sparse_emb.values.tolist(),
-                    ),
-                },
-                payload={**payloads[i], "_point_id": point_id},
-            ))
+            points.append(
+                PointStruct(
+                    id=_stable_id(point_id),  # Deterministic int64 from SHA-256
+                    vector={
+                        "dense": dense_vectors[i],
+                        "sparse": SparseVector(
+                            indices=sparse_emb.indices.tolist(),
+                            values=sparse_emb.values.tolist(),
+                        ),
+                    },
+                    payload={**payloads[i], "_point_id": point_id},
+                )
+            )
 
         self.client.upsert(
             collection_name=self.collection,

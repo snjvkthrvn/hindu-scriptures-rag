@@ -12,20 +12,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from parse_all_scriptures import (
-    parse_bhagavad_gita,
-    parse_upanishads,
-    parse_rigveda,
     parse_atharvaveda,
-    parse_yajurveda,
+    parse_bhagavad_gita,
     parse_mahabharata_critical,
-    parse_valmiki_ramayana,
     parse_ramcharitmanas,
+    parse_rigveda,
+    parse_upanishads,
+    parse_valmiki_ramayana,
+    parse_yajurveda,
 )
 
 
 def main():
     base_dir = Path(__file__).parent.parent
-    final_file = base_dir / 'final' / 'verses.json'
+    final_file = base_dir / "final" / "verses.json"
 
     if not final_file.exists():
         print("ERROR: final/verses.json not found")
@@ -36,15 +36,15 @@ def main():
     print("=" * 70)
 
     # Load final verses
-    with open(final_file, 'r', encoding='utf-8') as f:
+    with open(final_file, encoding="utf-8") as f:
         final_verses = json.load(f)
 
-    final_by_id = {v['id']: v for v in final_verses}
+    final_by_id = {v["id"]: v for v in final_verses}
     final_ids = set(final_by_id.keys())
     final_by_source = {}
     for v in final_verses:
-        src = v.get('source', {}).get('text', 'Unknown')
-        final_by_source.setdefault(src, set()).add(v['id'])
+        src = v.get("source", {}).get("text", "Unknown")
+        final_by_source.setdefault(src, set()).add(v["id"])
 
     print(f"\nFinal verses.json: {len(final_verses):,} total verses")
     print(f"Unique IDs: {len(final_ids):,}")
@@ -81,7 +81,7 @@ def main():
     for name, parser_fn in parsers:
         try:
             verses = parser_fn(base_dir)
-            expected_ids = {v['id'] for v in verses}
+            expected_ids = {v["id"] for v in verses}
             prefix = prefix_map.get(name, "")
 
             # Get final IDs for this source by prefix
@@ -97,7 +97,9 @@ def main():
                 all_ok = False
                 missing_total += missing_count
                 print(f"\n  [{name}]")
-                print(f"    Expected: {len(expected_ids):,}  |  In final: {len(final_for_source):,}")
+                print(
+                    f"    Expected: {len(expected_ids):,}  |  In final: {len(final_for_source):,}"
+                )
                 print(f"    MISSING: {missing_count:,} verses not in final/verses.json")
                 # Show first 10 missing IDs
                 sample = sorted(missing)[:10]
@@ -117,7 +119,8 @@ def main():
 
     # Also check for duplicate IDs in final
     from collections import Counter
-    id_counts = Counter(v['id'] for v in final_verses)
+
+    id_counts = Counter(v["id"] for v in final_verses)
     dups = [(i, c) for i, c in id_counts.items() if c > 1]
     if dups:
         print(f"\n  DUPLICATE IDs in final: {len(dups)}")
@@ -126,7 +129,14 @@ def main():
         all_ok = False
 
     # Check for empty content
-    empty_content = [v for v in final_verses if not (v.get('content', {}).get('sanskrit', '').strip() or v.get('content', {}).get('translation', '').strip())]
+    empty_content = [
+        v
+        for v in final_verses
+        if not (
+            v.get("content", {}).get("sanskrit", "").strip()
+            or v.get("content", {}).get("translation", "").strip()
+        )
+    ]
     if empty_content:
         print(f"\n  WARNING: {len(empty_content)} verses have empty sanskrit AND translation")
         for v in empty_content[:3]:
@@ -142,5 +152,5 @@ def main():
     sys.exit(0 if all_ok else 1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

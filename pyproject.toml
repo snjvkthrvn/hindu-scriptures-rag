@@ -1,0 +1,52 @@
+[project]
+name = "hindu-scriptures-rag"
+version = "0"
+description = "RAG over Hindu scriptures (Flask UI, Qdrant, embeddings)"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = ["ruff>=0.8.0"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["scripts", "english-v1-rag", "examples", "test_ui.py"]
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "qdrant_data",
+    "chromadb_data",
+    "raw",
+    "final",
+    ".superpowers",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line length (prefer formatter / manual wraps)
+]
+
+# Imports after sys.path hacks are intentional.
+[tool.ruff.lint.per-file-ignores]
+"english-v1-rag/agent/react_loop.py" = ["E402"]
+"english-v1-rag/agent/tools.py" = ["E402"]
+"english-v1-rag/index_english.py" = ["E402"]
+"scripts/rag/agent/react_loop.py" = ["E402"]
+"scripts/rag/agent/tools.py" = ["E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

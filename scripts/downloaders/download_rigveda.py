@@ -9,13 +9,12 @@ Uses Playwright for fetching (bypasses Cloudflare). Falls back to requests if
 Playwright unavailable; note that requests may get 403 from sacred-texts.com.
 """
 
-import re
 import json
+import re
 import time
-from pathlib import Path
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import List, Dict, Optional, Tuple
-from dataclasses import dataclass, field
+from pathlib import Path
 
 from bs4 import BeautifulSoup
 from tqdm import tqdm
@@ -23,12 +22,14 @@ from tqdm import tqdm
 # Prefer curl_cffi (bypasses Cloudflare); then Playwright; fall back to requests
 try:
     from curl_cffi import requests as curl_requests
+
     HAS_CURL_CFFI = True
 except ImportError:
     HAS_CURL_CFFI = False
 
 try:
     from playwright.sync_api import sync_playwright
+
     HAS_PLAYWRIGHT = True
 except ImportError:
     HAS_PLAYWRIGHT = False
@@ -42,15 +43,17 @@ except ImportError:
 @dataclass
 class HymnRef:
     """Reference to a hymn from a book index."""
+
     book: int
     hymn_num: int
     title: str
     filename: str
 
 
-@dataclass 
+@dataclass
 class Verse:
     """A single verse from the Rigveda."""
+
     book: int
     hymn: int
     verse_num: int
@@ -79,19 +82,20 @@ class RigvedaScraper:
             self.session = curl_requests.Session(impersonate="chrome")
         elif not self.use_playwright and requests:
             self.session = requests.Session()
-            if hasattr(self, 'session') and self.session:
-                self.session.headers.update({
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    "Accept-Language": "en-US,en;q=0.9",
-                })
+            if hasattr(self, "session") and self.session:
+                self.session.headers.update(
+                    {
+                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                        "Accept-Language": "en-US,en;q=0.9",
+                    }
+                )
 
     def __enter__(self):
         if self.use_playwright and not self.use_curl_cffi:
             self._playwright = sync_playwright().start()
             self._browser = self._playwright.chromium.launch(
-                headless=True,
-                args=["--disable-blink-features=AutomationControlled"]
+                headless=True, args=["--disable-blink-features=AutomationControlled"]
             )
             self._context = self._browser.new_context(
                 viewport={"width": 1280, "height": 720},
@@ -99,7 +103,11 @@ class RigvedaScraper:
             )
             # Warm up: visit main page first to pass Cloudflare
             page = self._context.new_page()
-            page.goto("https://www.sacred-texts.com/hin/rigveda/index.htm", wait_until="load", timeout=60000)
+            page.goto(
+                "https://www.sacred-texts.com/hin/rigveda/index.htm",
+                wait_until="load",
+                timeout=60000,
+            )
             page.wait_for_timeout(2000)
             page.close()
         return self
@@ -112,7 +120,7 @@ class RigvedaScraper:
         if self._playwright:
             self._playwright.stop()
 
-    def _fetch(self, path: str) -> Optional[str]:
+    def _fetch(self, path: str) -> str | None:
         """Fetch a page from sacred-texts.com."""
         url = f"{self.BASE_URL}/{path}" if not path.startswith("http") else path
         try:
@@ -139,8 +147,12 @@ class RigvedaScraper:
             elif self.session:
                 resp = self.session.get(url, timeout=30)
                 resp.raise_for_status()
-                encoding = getattr(resp, 'encoding', None) or getattr(resp, 'apparent_encoding', None) or 'utf-8'
-                if hasattr(resp, 'apparent_encoding') and resp.apparent_encoding:
+                encoding = (
+                    getattr(resp, "encoding", None)
+                    or getattr(resp, "apparent_encoding", None)
+                    or "utf-8"
+                )
+                if hasattr(resp, "apparent_encoding") and resp.apparent_encoding:
                     encoding = resp.apparent_encoding
                 resp.encoding = encoding
                 return resp.text
@@ -148,7 +160,7 @@ class RigvedaScraper:
             print(f"  Error fetching {url}: {e}")
             return None
 
-    def get_book_hymns(self, book: int) -> List[HymnRef]:
+    def get_book_hymns(self, book: int) -> list[HymnRef]:
         """Parse a book index page to get all hymn references."""
         path = f"rvi{book:02d}.htm"
         html = self._fetch(path)
@@ -171,7 +183,7 @@ class RigvedaScraper:
 
         return hymns
 
-    def parse_hymn_page(self, html: str, book: int, hymn: int, hymn_name: str) -> List[Verse]:
+    def parse_hymn_page(self, html: str, book: int, hymn: int, hymn_name: str) -> list[Verse]:
         """Parse a hymn page to extract verses."""
         soup = BeautifulSoup(html, "html.parser")
 
@@ -182,7 +194,7 @@ class RigvedaScraper:
             return []
 
         text = body.get_text(separator="\n", strip=True)
-        lines = [l.strip() for l in text.split("\n") if l.strip()]
+        lines = [line.strip() for line in text.split("\n") if line.strip()]
 
         verses = []
         current_verse_num = None
@@ -194,13 +206,15 @@ class RigvedaScraper:
             if match:
                 # Save previous verse if any
                 if current_verse_num is not None and current_lines:
-                    verses.append(Verse(
-                        book=book,
-                        hymn=hymn,
-                        verse_num=current_verse_num,
-                        hymn_name=hymn_name,
-                        text=" ".join(current_lines).strip()
-                    ))
+                    verses.append(
+                        Verse(
+                            book=book,
+                            hymn=hymn,
+                            verse_num=current_verse_num,
+                            hymn_name=hymn_name,
+                            text=" ".join(current_lines).strip(),
+                        )
+                    )
 
                 current_verse_num = int(match.group(1))
                 current_lines = [match.group(2)]
@@ -209,13 +223,15 @@ class RigvedaScraper:
                 current_lines.append(line)
 
         if current_verse_num is not None and current_lines:
-            verses.append(Verse(
-                book=book,
-                hymn=hymn,
-                verse_num=current_verse_num,
-                hymn_name=hymn_name,
-                text=" ".join(current_lines).strip()
-            ))
+            verses.append(
+                Verse(
+                    book=book,
+                    hymn=hymn,
+                    verse_num=current_verse_num,
+                    hymn_name=hymn_name,
+                    text=" ".join(current_lines).strip(),
+                )
+            )
 
         return verses
 
@@ -227,7 +243,9 @@ class RigvedaScraper:
             return match.group(1).strip()
         return title
 
-    def scrape_all(self, books: Optional[List[int]] = None, save_html_dir: Optional[Path] = None) -> List[Dict]:
+    def scrape_all(
+        self, books: list[int] | None = None, save_html_dir: Path | None = None
+    ) -> list[dict]:
         """Scrape the complete Rigveda and return verses as JSON-serializable dicts."""
         all_verses = []
         books = books or list(range(1, 11))
@@ -253,38 +271,40 @@ class RigvedaScraper:
 
                 for v in verses:
                     verse_id = f"rv_{v.book}_{v.hymn}_{v.verse_num}"
-                    all_verses.append({
-                        "id": verse_id,
-                        "source": {
-                            "text": "Rig Veda",
-                            "book": v.book,
-                            "book_name": f"Mandala {v.book}",
-                            "hymn": v.hymn,
-                            "hymn_name": v.hymn_name,
-                            "verse": v.verse_num,
-                        },
-                        "content": {
-                            "sanskrit": "",
-                            "transliteration": "",
-                            "translation": v.text,
-                            "word_by_word": {}
-                        },
-                        "metadata": {
-                            "category": "shruti",
-                            "tradition": "vedic",
-                            "themes": ["rigveda"],
-                            "philosophical_schools": []
-                        },
-                        "commentaries": [],
-                        "provenance": {
-                            "download_source": "sacred-texts",
-                            "original_url": f"{self.BASE_URL}/{ref.filename}",
-                            "translator": "Ralph T.H. Griffith",
-                            "translation_year": 1896,
-                            "license": "Public Domain",
-                            "processed_date": datetime.now(timezone.utc).isoformat()
+                    all_verses.append(
+                        {
+                            "id": verse_id,
+                            "source": {
+                                "text": "Rig Veda",
+                                "book": v.book,
+                                "book_name": f"Mandala {v.book}",
+                                "hymn": v.hymn,
+                                "hymn_name": v.hymn_name,
+                                "verse": v.verse_num,
+                            },
+                            "content": {
+                                "sanskrit": "",
+                                "transliteration": "",
+                                "translation": v.text,
+                                "word_by_word": {},
+                            },
+                            "metadata": {
+                                "category": "shruti",
+                                "tradition": "vedic",
+                                "themes": ["rigveda"],
+                                "philosophical_schools": [],
+                            },
+                            "commentaries": [],
+                            "provenance": {
+                                "download_source": "sacred-texts",
+                                "original_url": f"{self.BASE_URL}/{ref.filename}",
+                                "translator": "Ralph T.H. Griffith",
+                                "translation_year": 1896,
+                                "license": "Public Domain",
+                                "processed_date": datetime.now(timezone.utc).isoformat(),
+                            },
                         }
-                    })
+                    )
 
         return all_verses
 
@@ -295,9 +315,9 @@ def _extract_hymn_name(title: str) -> str:
     return match.group(1).strip() if match else title
 
 
-def scrape_from_html_dir(html_dir: Path, books: List[int]) -> List[Dict]:
+def scrape_from_html_dir(html_dir: Path, books: list[int]) -> list[dict]:
     """Load and parse Rigveda from pre-downloaded HTML files.
-    
+
     Expected structure: html_dir/rv01001.htm, rv01002.htm, etc.
     """
     html_dir = Path(html_dir)
@@ -315,7 +335,7 @@ def scrape_from_html_dir(html_dir: Path, books: List[int]) -> List[Dict]:
             if b != book:
                 continue
 
-            with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+            with open(filepath, encoding="utf-8", errors="replace") as f:
                 html = f.read()
 
             soup = BeautifulSoup(html, "html.parser")
@@ -324,41 +344,43 @@ def scrape_from_html_dir(html_dir: Path, books: List[int]) -> List[Dict]:
             hymn_name = _extract_hymn_name(hymn_name)
 
             verses = scraper.parse_hymn_page(html, book, h, hymn_name)
-            
+
             for v in verses:
                 verse_id = f"rv_{v.book}_{v.hymn}_{v.verse_num}"
-                all_verses.append({
-                    "id": verse_id,
-                    "source": {
-                        "text": "Rig Veda",
-                        "book": v.book,
-                        "book_name": f"Mandala {v.book}",
-                        "hymn": v.hymn,
-                        "hymn_name": v.hymn_name,
-                        "verse": v.verse_num,
-                    },
-                    "content": {
-                        "sanskrit": "",
-                        "transliteration": "",
-                        "translation": v.text,
-                        "word_by_word": {}
-                    },
-                    "metadata": {
-                        "category": "shruti",
-                        "tradition": "vedic",
-                        "themes": ["rigveda"],
-                        "philosophical_schools": []
-                    },
-                    "commentaries": [],
-                    "provenance": {
-                        "download_source": "sacred-texts",
-                        "original_url": f"{RigvedaScraper.BASE_URL}/{filepath.name}",
-                        "translator": "Ralph T.H. Griffith",
-                        "translation_year": 1896,
-                        "license": "Public Domain",
-                        "processed_date": datetime.now(timezone.utc).isoformat()
+                all_verses.append(
+                    {
+                        "id": verse_id,
+                        "source": {
+                            "text": "Rig Veda",
+                            "book": v.book,
+                            "book_name": f"Mandala {v.book}",
+                            "hymn": v.hymn,
+                            "hymn_name": v.hymn_name,
+                            "verse": v.verse_num,
+                        },
+                        "content": {
+                            "sanskrit": "",
+                            "transliteration": "",
+                            "translation": v.text,
+                            "word_by_word": {},
+                        },
+                        "metadata": {
+                            "category": "shruti",
+                            "tradition": "vedic",
+                            "themes": ["rigveda"],
+                            "philosophical_schools": [],
+                        },
+                        "commentaries": [],
+                        "provenance": {
+                            "download_source": "sacred-texts",
+                            "original_url": f"{RigvedaScraper.BASE_URL}/{filepath.name}",
+                            "translator": "Ralph T.H. Griffith",
+                            "translation_year": 1896,
+                            "license": "Public Domain",
+                            "processed_date": datetime.now(timezone.utc).isoformat(),
+                        },
                     }
-                })
+                )
 
     return all_verses
 
@@ -369,34 +391,32 @@ def main():
 
     parser = argparse.ArgumentParser(description="Scrape Rigveda from sacred-texts.com")
     parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         default=None,
-        help="Output JSON file path (default: raw/sacred-texts/rigveda.json)"
+        help="Output JSON file path (default: raw/sacred-texts/rigveda.json)",
     )
     parser.add_argument(
-        "--delay",
-        type=float,
-        default=1.5,
-        help="Delay between requests in seconds (default: 1.5)"
+        "--delay", type=float, default=1.5, help="Delay between requests in seconds (default: 1.5)"
     )
     parser.add_argument(
         "--books",
         type=str,
         default="1-10",
-        help="Book range to scrape, e.g. '1-3' or '1' (default: 1-10)"
+        help="Book range to scrape, e.g. '1-3' or '1' (default: 1-10)",
     )
     parser.add_argument(
         "--from-html-dir",
         type=str,
         default=None,
-        help="Load from pre-downloaded HTML files instead of fetching (for when Cloudflare blocks requests)"
+        help="Load from pre-downloaded HTML files instead of fetching (for when Cloudflare blocks requests)",
     )
     parser.add_argument(
         "--save-html",
         type=str,
         default=None,
         metavar="DIR",
-        help="Save fetched HTML to directory (enables Option B: HTML first, then parse)"
+        help="Save fetched HTML to directory (enables Option B: HTML first, then parse)",
     )
 
     args = parser.parse_args()
@@ -426,7 +446,9 @@ def main():
         verses = scrape_from_html_dir(html_dir, books=list(books_to_scrape))
     else:
         print(f"Delay: {args.delay}s between requests")
-        print(f"Using: {'curl_cffi (Chrome)' if HAS_CURL_CFFI else 'Playwright (browser)' if HAS_PLAYWRIGHT else 'requests (may get 403)'}")
+        print(
+            f"Using: {'curl_cffi (Chrome)' if HAS_CURL_CFFI else 'Playwright (browser)' if HAS_PLAYWRIGHT else 'requests (may get 403)'}"
+        )
         print("Note: sacred-texts.com uses Cloudflare; requests from data centers may get 403.")
         print("      Try --from-html-dir with manually saved HTML if blocked.")
         print("Please be respectful - this will make 1000+ requests.")

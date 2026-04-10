@@ -18,8 +18,8 @@ Output: english-v1-rag/verses_english_only.json
 import csv
 import json
 import sys
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_FILE = Path(__file__).resolve().parent / "verses_english_only.json"
@@ -71,7 +71,7 @@ def _is_english_text(text: str) -> bool:
     if not text or len(text) < 10:
         return False
     # Devanagari range – if present, likely Sanskrit
-    devanagari = sum(1 for c in text if "\u0900" <= c <= "\u097F")
+    devanagari = sum(1 for c in text if "\u0900" <= c <= "\u097f")
     return devanagari < len(text) * 0.1
 
 
@@ -168,32 +168,36 @@ def load_claude_upanishads() -> list:
         vn = verse_counter[text_name]
         slug = text_name.lower().replace(" ", "_")
         vid = f"up_claude_{slug}_{vn}"
-        out.append(normalize_verse({
-            "id": vid,
-            "source": {
-                "text": f"{text_name} (Claude)",
-                "chapter": src.get("chapter") or 1,
-                "chapter_name": src.get("chapter_name") or text_name,
-                "verse": vn,
-            },
-            "content": {
-                "sanskrit": (v.get("content") or {}).get("sanskrit", ""),
-                "transliteration": "",
-                "translation": trans,
-            },
-            "metadata": {
-                "category": "shruti",
-                "tradition": "vedanta",
-                "themes": ["upanishad", slug],
-            },
-            "commentaries": v.get("commentaries", []),
-            "provenance": {
-                "download_source": "final",
-                "translator": "Claude (Anthropic)",
-                "license": "Project",
-                "processed_date": datetime.now(timezone.utc).isoformat(),
-            },
-        }))
+        out.append(
+            normalize_verse(
+                {
+                    "id": vid,
+                    "source": {
+                        "text": f"{text_name} (Claude)",
+                        "chapter": src.get("chapter") or 1,
+                        "chapter_name": src.get("chapter_name") or text_name,
+                        "verse": vn,
+                    },
+                    "content": {
+                        "sanskrit": (v.get("content") or {}).get("sanskrit", ""),
+                        "transliteration": "",
+                        "translation": trans,
+                    },
+                    "metadata": {
+                        "category": "shruti",
+                        "tradition": "vedanta",
+                        "themes": ["upanishad", slug],
+                    },
+                    "commentaries": v.get("commentaries", []),
+                    "provenance": {
+                        "download_source": "final",
+                        "translator": "Claude (Anthropic)",
+                        "license": "Project",
+                        "processed_date": datetime.now(timezone.utc).isoformat(),
+                    },
+                }
+            )
+        )
     return out
 
 

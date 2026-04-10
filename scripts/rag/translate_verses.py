@@ -76,7 +76,7 @@ AWADHI_SYSTEM_PROMPT = (
 
 # Batch sizes
 UPANISHAD_BATCH_SIZE = 10  # Short verses
-DEFAULT_BATCH_SIZE = 5     # Longer verses
+DEFAULT_BATCH_SIZE = 5  # Longer verses
 
 # Rate-limit backoff schedule (seconds)
 BACKOFF_SCHEDULE = [15, 30, 60, 120, 300]
@@ -101,6 +101,7 @@ signal.signal(signal.SIGTERM, _signal_handler)
 
 
 # ── Cache & checkpoint helpers ───────────────────────────────────────────
+
 
 def load_cache() -> dict[str, str]:
     """Load cache keyed by idx_NNN -> translation."""
@@ -142,6 +143,7 @@ def log_error(batch_info: str, error: str) -> None:
 
 
 # ── Verse selection ──────────────────────────────────────────────────────
+
 
 def load_verses() -> list[dict]:
     print(f"Loading {VERSES_FILE}...")
@@ -195,8 +197,9 @@ def get_verse_location(verse: dict) -> str:
     return ", ".join(parts)
 
 
-def select_verses(verses: list[dict], source_filter: str | None,
-                  cache: dict[str, str]) -> list[tuple[int, dict]]:
+def select_verses(
+    verses: list[dict], source_filter: str | None, cache: dict[str, str]
+) -> list[tuple[int, dict]]:
     """Select (index, verse) pairs that need translation."""
     selected: list[tuple[int, dict]] = []
     for idx, v in enumerate(verses):
@@ -210,14 +213,17 @@ def select_verses(verses: list[dict], source_filter: str | None,
 
     # Sort by source priority, then by array index
     priority_map = {s: i for i, s in enumerate(SOURCE_PRIORITY)}
-    selected.sort(key=lambda pair: (
-        priority_map.get(get_source_text(pair[1]), 999),
-        pair[0],
-    ))
+    selected.sort(
+        key=lambda pair: (
+            priority_map.get(get_source_text(pair[1]), 999),
+            pair[0],
+        )
+    )
     return selected
 
 
 # ── API call with retry ──────────────────────────────────────────────────
+
 
 def build_batch_prompt(batch: list[tuple[int, dict]]) -> tuple[str, list[tuple[str, int]]]:
     """Build the user message for a batch. Returns (prompt, [(label, array_idx), ...])."""
@@ -255,7 +261,7 @@ def parse_response(text: str, label_map: list[tuple[str, int]]) -> dict[str, str
         if m:
             result = json.loads(m.group())
         else:
-            raise ValueError(f"Could not parse JSON from response: {text[:200]}")
+            raise ValueError(f"Could not parse JSON from response: {text[:200]}") from None
 
     if not isinstance(result, dict):
         raise ValueError(f"Expected dict, got {type(result).__name__}")
@@ -276,9 +282,9 @@ def parse_response(text: str, label_map: list[tuple[str, int]]) -> dict[str, str
     return cache_updates
 
 
-def translate_batch(client: anthropic.Anthropic,
-                    batch: list[tuple[int, dict]],
-                    model: str) -> dict[str, str]:
+def translate_batch(
+    client: anthropic.Anthropic, batch: list[tuple[int, dict]], model: str
+) -> dict[str, str]:
     """Translate a batch of verses. Returns {idx_NNN: translation}."""
     source = get_source_text(batch[0][1])
     system = AWADHI_SYSTEM_PROMPT if source in AWADHI_SOURCES else SANSKRIT_SYSTEM_PROMPT
@@ -296,7 +302,9 @@ def translate_batch(client: anthropic.Anthropic,
             return parse_response(text, label_map)
 
         except anthropic.RateLimitError:
-            print(f"  Rate limited — waiting {backoff}s (attempt {attempt + 1}/{len(BACKOFF_SCHEDULE)})...")
+            print(
+                f"  Rate limited — waiting {backoff}s (attempt {attempt + 1}/{len(BACKOFF_SCHEDULE)})..."
+            )
             time.sleep(backoff)
         except anthropic.APIStatusError as e:
             if e.status_code == 529:
@@ -310,8 +318,8 @@ def translate_batch(client: anthropic.Anthropic,
 
 # ── Main pipeline ────────────────────────────────────────────────────────
 
-def run_translate(source_filter: str | None, dry_run: bool, resume: bool,
-                  model: str) -> None:
+
+def run_translate(source_filter: str | None, dry_run: bool, resume: bool, model: str) -> None:
     cache = load_cache()
     verses = load_verses()
 
@@ -334,7 +342,7 @@ def run_translate(source_filter: str | None, dry_run: bool, resume: bool,
         print("\n[DRY RUN] No translations will be performed.")
         for idx, v in todo[:5]:
             text = get_sanskrit_text(v)[:100]
-            print(f"  idx_{idx} ({v.get('id','')}): {text}...")
+            print(f"  idx_{idx} ({v.get('id', '')}): {text}...")
         if len(todo) > 5:
             print(f"  ... and {len(todo) - 5} more")
         return
@@ -426,7 +434,7 @@ def run_merge() -> None:
         json.dump(verses, f, ensure_ascii=False, indent=1)
     tmp.rename(VERSES_FILE)
     print(f"Saved to {VERSES_FILE}")
-    print(f"\nNext step: re-index with 'python scripts/rag/indexer.py'")
+    print("\nNext step: re-index with 'python scripts/rag/indexer.py'")
 
 
 def run_clean_fake() -> None:
@@ -458,18 +466,32 @@ def main():
     parser = argparse.ArgumentParser(
         description="Translate Hindu scripture verses to English using Claude"
     )
-    parser.add_argument("--source", type=str, default=None,
-                        help="Translate only this source (e.g., 'Isha Upanishad')")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Show what would be translated without calling the API")
-    parser.add_argument("--resume", action="store_true",
-                        help="Resume from the last checkpoint")
-    parser.add_argument("--merge", action="store_true",
-                        help="Merge cached translations into verses_enriched.json")
-    parser.add_argument("--clean-fake", action="store_true",
-                        help="Clear fake translations (translation == sanskrit)")
-    parser.add_argument("--model", type=str, default="claude-sonnet-4-5-20250929",
-                        help="Anthropic model to use (default: claude-sonnet-4-5-20250929)")
+    parser.add_argument(
+        "--source",
+        type=str,
+        default=None,
+        help="Translate only this source (e.g., 'Isha Upanishad')",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be translated without calling the API",
+    )
+    parser.add_argument("--resume", action="store_true", help="Resume from the last checkpoint")
+    parser.add_argument(
+        "--merge", action="store_true", help="Merge cached translations into verses_enriched.json"
+    )
+    parser.add_argument(
+        "--clean-fake",
+        action="store_true",
+        help="Clear fake translations (translation == sanskrit)",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="claude-sonnet-4-5-20250929",
+        help="Anthropic model to use (default: claude-sonnet-4-5-20250929)",
+    )
 
     args = parser.parse_args()
 

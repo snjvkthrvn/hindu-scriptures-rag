@@ -12,9 +12,9 @@ from __future__ import annotations
 import argparse
 import csv
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 import cloudscraper
 from bs4 import BeautifulSoup

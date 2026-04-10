@@ -30,14 +30,14 @@ def text_to_html(text: str) -> str:
 
     if not verses and "HYMN" in text:
         # Fallback: line-by-line parse
-        lines = [l.strip() for l in text.split("\n") if l.strip()]
+        lines = [line.strip() for line in text.split("\n") if line.strip()]
         for line in lines:
             if re.match(r"^(\d+)\s+", line) and not line.startswith("["):
                 m = re.match(r"^(\d+)\s+(.+)$", line)
                 if m:
                     verses.append((int(m.group(1)), m.group(2).strip()))
 
-    html_parts = ['<!DOCTYPE html><html><body>']
+    html_parts = ["<!DOCTYPE html><html><body>"]
     if title:
         html_parts.append(f"<h3>{title}</h3>")
     for num, text in verses:

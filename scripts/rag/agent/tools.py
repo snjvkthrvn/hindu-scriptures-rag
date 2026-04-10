@@ -15,8 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config import RAGConfig
-from search import search, search_by_verse_id, search_with_context_expansion, format_context
-
+from search import format_context, search, search_by_verse_id, search_with_context_expansion
 
 # ── Source name aliases → canonical names (as in verses_enriched.json) ────
 
@@ -153,7 +152,15 @@ TOOL_DEFINITIONS = [
                 },
                 "school": {
                     "type": "string",
-                    "enum": ["advaita", "vishishtadvaita", "dvaita", "shuddhadvaita", "kashmir_shaivism", "common", ""],
+                    "enum": [
+                        "advaita",
+                        "vishishtadvaita",
+                        "dvaita",
+                        "shuddhadvaita",
+                        "kashmir_shaivism",
+                        "common",
+                        "",
+                    ],
                     "description": "Filter by philosophical school.",
                 },
                 "author": {
@@ -261,6 +268,7 @@ TOOL_DEFINITIONS = [
 
 # ── Verse reference normalization ─────────────────────────────────────────
 
+
 def normalize_verse_ref(ref: str) -> str:
     """Convert human-friendly refs like 'BG 2.47' to internal IDs like 'bg_2_47'.
 
@@ -271,102 +279,106 @@ def normalize_verse_ref(ref: str) -> str:
     ref = ref.strip()
 
     # Already in internal format (e.g., bg_2_47)
-    if re.match(r'^[a-z]+_\d+', ref):
+    if re.match(r"^[a-z]+_\d+", ref):
         return ref
 
     # BG 2.47 → bg_2_47 (Bhagavad Gita)
-    m = re.match(r'BG\s+(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"BG\s+(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"bg_{m.group(1)}_{m.group(2)}"
 
     # RV 1.1.1 → rv_1_1_1 (Rigveda)
-    m = re.match(r'RV\s+(\d+)\.(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"RV\s+(\d+)\.(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"rv_{m.group(1)}_{m.group(2)}_{m.group(3)}"
 
     # AV 1.1.1 → av_1_1_1 (Atharvaveda)
-    m = re.match(r'AV\s+(\d+)\.(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"AV\s+(\d+)\.(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"av_{m.group(1)}_{m.group(2)}_{m.group(3)}"
 
     # YV 1.1 → yv_1_1 (Yajurveda)
-    m = re.match(r'YV\s+(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"YV\s+(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"yv_{m.group(1)}_{m.group(2)}"
 
     # VR 1.1.1 → vr_1_1_1 (Valmiki Ramayana)
-    m = re.match(r'VR\s+(\d+)\.(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"VR\s+(\d+)\.(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"vr_{m.group(1)}_{m.group(2)}_{m.group(3)}"
 
     # MBhCE 1.1.1 or MBh 1.1.1 → mbhce_1_1_1 (Mahabharata Critical Edition)
-    m = re.match(r'MBh(?:CE)?\s+(\d+)\.(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"MBh(?:CE)?\s+(\d+)\.(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"mbhce_{m.group(1)}_{m.group(2)}_{m.group(3)}"
 
     # RCM 1.1 → rcm_1_1 (Ramcharitmanas)
-    m = re.match(r'RCM\s+(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"RCM\s+(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"rcm_{m.group(1)}_{m.group(2)}"
 
     # --- Upanishads ---
     # Generic pattern: "XYZ Upanishad 1.2.3" or "XYZ Up 1.2.3" or "XYZ Up. 1.2"
     # Isha Upanishad (single numbering: verse N)
-    m = re.match(r'Isha\s+(?:Up(?:anishad)?\.?\s+)?(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"Isha\s+(?:Up(?:anishad)?\.?\s+)?(\d+)", ref, re.IGNORECASE)
     if m:
         return f"isha_{m.group(1)}"
 
     # Kena Upanishad (section.verse)
-    m = re.match(r'Kena\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"Kena\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"kena_{m.group(1)}_{m.group(2)}"
 
     # Katha Upanishad (valli.section.verse or section.verse)
-    m = re.match(r'Katha\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"Katha\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"katha_{m.group(1)}_{m.group(2)}_{m.group(3)}"
-    m = re.match(r'Katha\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"Katha\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"katha_{m.group(1)}_{m.group(2)}"
 
     # Prashna Upanishad (prashna.verse)
-    m = re.match(r'Prashna\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"Prashna\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"prashna_{m.group(1)}_{m.group(2)}"
 
     # Mundaka Upanishad (mundaka.section.verse)
-    m = re.match(r'Mundaka\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"Mundaka\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"mundaka_{m.group(1)}_{m.group(2)}_{m.group(3)}"
-    m = re.match(r'Mundaka\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"Mundaka\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"mundaka_{m.group(1)}_{m.group(2)}"
 
     # Mandukya Upanishad (verse)
-    m = re.match(r'Mandukya\s+(?:Up(?:anishad)?\.?\s+)?(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"Mandukya\s+(?:Up(?:anishad)?\.?\s+)?(\d+)", ref, re.IGNORECASE)
     if m:
         return f"mandukya_{m.group(1)}"
 
     # Taittiriya Upanishad (valli.anuvaka)
-    m = re.match(r'Taittiriya\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"Taittiriya\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"taittiriya_{m.group(1)}_{m.group(2)}"
 
     # Aitareya Upanishad (section.verse)
-    m = re.match(r'Aitareya\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"Aitareya\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"aitareya_{m.group(1)}_{m.group(2)}"
 
     # Brihadaranyaka Upanishad (adhyaya.brahmana.verse)
-    m = re.match(r'Bri?had(?:aranyaka)?\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(
+        r"Bri?had(?:aranyaka)?\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)\.(\d+)", ref, re.IGNORECASE
+    )
     if m:
         return f"brihad_{m.group(1)}_{m.group(2)}_{m.group(3)}"
-    m = re.match(r'Bri?had(?:aranyaka)?\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(
+        r"Bri?had(?:aranyaka)?\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE
+    )
     if m:
         return f"brihad_{m.group(1)}_{m.group(2)}"
 
     # Svetasvatara Upanishad (chapter.verse)
-    m = re.match(r'Sveta?s?vatara\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)', ref, re.IGNORECASE)
+    m = re.match(r"Sveta?s?vatara\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
         return f"svetasvatara_{m.group(1)}_{m.group(2)}"
 
@@ -375,6 +387,7 @@ def normalize_verse_ref(ref: str) -> str:
 
 
 # ── Tool execution ────────────────────────────────────────────────────────
+
 
 def execute_tool(name: str, input_data: dict, config: RAGConfig) -> str:
     """Execute a tool and return the result as a string for Claude."""
@@ -475,7 +488,9 @@ def _exec_compare_schools(input_data: dict, config: RAGConfig) -> str:
     parts = []
 
     if verse_result:
-        parts.append(f"=== Verse: {verse_result['source_text']} {verse_result['chapter']}.{verse_result['verse_num']} ===")
+        parts.append(
+            f"=== Verse: {verse_result['source_text']} {verse_result['chapter']}.{verse_result['verse_num']} ==="
+        )
         if verse_result.get("sanskrit"):
             parts.append(f"Sanskrit: {verse_result['sanskrit']}")
         if verse_result.get("transliteration"):
@@ -530,7 +545,7 @@ def _exec_search_story(input_data: dict, config: RAGConfig) -> str:
     parts = []
     prev_source = None
     prev_chapter = None
-    for i, r in enumerate(results, 1):
+    for _i, r in enumerate(results, 1):
         source = r.get("source_text", "")
         chapter = r.get("chapter")
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 
-from config import RAGConfig, LLMProvider
 import llm as llm_module
+from config import LLMProvider, RAGConfig
 
 logger = logging.getLogger(__name__)
 
@@ -86,8 +86,4 @@ def augment_context_with_sanskrit_gloss(
     if not gloss:
         return base_context
 
-    return (
-        base_context
-        + "\n\n--- Sanskrit reading aids (assistant) ---\n"
-        + gloss
-    )
+    return base_context + "\n\n--- Sanskrit reading aids (assistant) ---\n" + gloss

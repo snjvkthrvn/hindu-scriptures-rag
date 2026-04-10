@@ -20,13 +20,12 @@ import os
 import secrets
 import sqlite3
 
+from config import PROJECT_ROOT
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, session, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFError, CSRFProtect, validate_csrf
 from werkzeug.security import check_password_hash, generate_password_hash
-
-from config import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +52,7 @@ def open_registration() -> bool:
 def _authlib_available() -> bool:
     try:
         import authlib  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -710,9 +710,7 @@ def register_api_me_on_app(app) -> None:
                     "logged_in": False,
                     "guest_limit": lim,
                     "guest_messages_used": used,
-                    "guest_messages_remaining": (
-                        max(0, lim - used) if lim > 0 else None
-                    ),
+                    "guest_messages_remaining": (max(0, lim - used) if lim > 0 else None),
                 }
             )
         return jsonify(

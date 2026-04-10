@@ -18,9 +18,7 @@ _PATTERNS: list[tuple[re.Pattern, bool]] = [
     (re.compile(r"\b(BG)\s+(\d+\.\d+)\b"), False),
     (re.compile(r"\b(RV|AV|YV|SV)\s+(\d+\.\d+(?:\.\d+)?)\b"), False),
     (re.compile(r"\b(MBh|Ram)\s+(\d+\.\d+(?:\.\d+)?)\b"), False),
-    (re.compile(
-        rf"\b({_UPANISHAD_NAMES})\s+Up\.?\s+(\d+(?:\.\d+){{0,2}})\b"
-    ), True),
+    (re.compile(rf"\b({_UPANISHAD_NAMES})\s+Up\.?\s+(\d+(?:\.\d+){{0,2}})\b"), True),
 ]
 
 
