@@ -1,7 +1,7 @@
 """Flask web interface for the Hindu Scriptures RAG system.
 
 Usage:
-    python scripts/rag/app.py
+    python scripts/rag/app.py   # default http://0.0.0.0:5001
     # or: make web
 """
 
@@ -66,7 +66,7 @@ _base_config = RAGConfig()
 # ---------------------------------------------------------------------------
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", api_base="")
 
 
 @app.route("/api/sources")

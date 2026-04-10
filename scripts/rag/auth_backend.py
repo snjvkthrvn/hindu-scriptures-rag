@@ -7,10 +7,14 @@ messages are consumed; then they must sign in. No automatic redirect to login on
 Optional: ADMIN_EMAIL + ADMIN_PASSWORD to create the first user when the DB is empty.
 Optional: OPEN_REGISTRATION=1 to allow POST /auth/register.
 Optional: GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET for "Sign in with Google" (OAuth 2 / OIDC).
+
+Logged-in users: GET/PUT /api/chat/state stores conversation JSON in SQLite (user_chats).
+Guests keep using the browser only; guest RAG quota unchanged when AUTH_REQUIRED=1.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import secrets
@@ -87,6 +91,37 @@ def init_db() -> None:
             """
         )
     _migrate_google_sub()
+    _migrate_user_chats()
+
+
+def _migrate_user_chats() -> None:
+    with _connect() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_chats (
+                user_id INTEGER PRIMARY KEY,
+                messages_json TEXT NOT NULL DEFAULT '[]',
+                updated_at TEXT DEFAULT (datetime('now'))
+            )
+            """
+        )
+        conn.commit()
+
+
+def _validate_chat_messages(messages: list) -> tuple[bool, str]:
+    if len(messages) > 100:
+        return False, "too many messages"
+    for m in messages:
+        if not isinstance(m, dict):
+            return False, "invalid message"
+        if m.get("role") not in ("user", "assistant"):
+            return False, "invalid role"
+        c = m.get("content")
+        if not isinstance(c, str):
+            return False, "invalid content"
+        if len(c) > 500_000:
+            return False, "message too long"
+    return True, ""
 
 
 def _migrate_google_sub() -> None:
@@ -284,6 +319,7 @@ def register_auth(app) -> None:
     _register_google_oauth(app)
     app.register_blueprint(auth_bp)
     register_api_me_on_app(app)
+    register_chat_api(app)
 
     if os.environ.get("SESSION_COOKIE_SECURE", "").strip().lower() in ("1", "true", "yes"):
         app.config["SESSION_COOKIE_SECURE"] = True
@@ -347,6 +383,7 @@ def register_auth(app) -> None:
             "auth_required_flag": auth_required(),
             "current_user_email": session.get("user_email"),
             "guest_message_limit": guest_message_limit() if auth_required() else 0,
+            "open_registration": open_registration(),
         }
 
 
@@ -487,6 +524,55 @@ def register():
         session.pop("guest_msgs", None)
         session.permanent = True
     return redirect(next_url or "/")
+
+
+def register_chat_api(app) -> None:
+    """GET/PUT /api/chat/state — persist one conversation thread per logged-in user."""
+
+    @app.route("/api/chat/state", methods=["GET", "PUT"])
+    def api_chat_state():
+        uid = session.get("user_id")
+        if not uid:
+            return jsonify({"error": "login_required"}), 401
+        if request.method == "GET":
+            with _connect() as conn:
+                row = conn.execute(
+                    "SELECT messages_json FROM user_chats WHERE user_id = ?",
+                    (uid,),
+                ).fetchone()
+            if not row:
+                return jsonify({"messages": []})
+            try:
+                msgs = json.loads(row["messages_json"])
+            except json.JSONDecodeError:
+                msgs = []
+            if not isinstance(msgs, list):
+                msgs = []
+            return jsonify({"messages": msgs})
+
+        data = request.get_json(silent=True) or {}
+        messages = data.get("messages")
+        if not isinstance(messages, list):
+            return jsonify({"error": "messages must be a list"}), 400
+        ok, err = _validate_chat_messages(messages)
+        if not ok:
+            return jsonify({"error": err}), 400
+        payload = json.dumps(messages)
+        if len(payload) > 2_000_000:
+            return jsonify({"error": "payload too large"}), 400
+        with _connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO user_chats (user_id, messages_json, updated_at)
+                VALUES (?, ?, datetime('now'))
+                ON CONFLICT(user_id) DO UPDATE SET
+                    messages_json = excluded.messages_json,
+                    updated_at = excluded.updated_at
+                """,
+                (uid, payload),
+            )
+            conn.commit()
+        return jsonify({"ok": True})
 
 
 def register_api_me_on_app(app) -> None:

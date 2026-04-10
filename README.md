@@ -51,6 +51,18 @@ print(f'Total verses: {len(verses)}')
 "
 ```
 
+## Web RAG chat UI
+
+The chat servers depend on **`requirements-rag.txt`** (Flask, Qdrant, Cohere, Anthropic, etc.). The **data pipeline** uses **`requirements.txt`** — install both if you work on ingest and the UI.
+
+| Entrypoint | Command | Default port |
+|------------|---------|--------------|
+| English edition | `python english-v1-rag/app.py` | 5002 |
+| Full corpus (standalone) | `python scripts/rag/app.py` | 5001 |
+| English + full corpus at `/main` | `python english-v1-rag/app.py` | 5002 |
+
+`docker compose` runs the English app on **5002** (`docker-compose.yml`). Copy **`.env.example`** to `.env` and set API keys (and optional auth variables).
+
 ## Directory Structure
 
 ```

@@ -1,5 +1,8 @@
 FROM python:3.12-slim AS base
 
+# Default image runs the English chat app (same as docker-compose `rag` service).
+# Override command/workdir if you need scripts/rag standalone on 5001.
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -14,6 +17,8 @@ COPY english-v1-rag/       english-v1-rag/
 
 RUN mkdir -p final
 
-EXPOSE 5001 5002
+WORKDIR /app/english-v1-rag
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "2", "--timeout", "120", "app:app"]
+EXPOSE 5002
+
+CMD ["gunicorn", "--bind", "0.0.0.0:5002", "--workers", "2", "--timeout", "120", "app:app"]

@@ -6,8 +6,8 @@ with sync_playwright() as p:
     page = browser.new_page()
     
     # Step 1: Navigate to the page
-    print("Step 1: Navigating to http://localhost:5001/")
-    page.goto('http://localhost:5001/')
+    print("Step 1: Navigating to http://localhost:5002/")
+    page.goto("http://localhost:5002/")
     page.wait_for_load_state('networkidle')
     
     # Take first screenshot

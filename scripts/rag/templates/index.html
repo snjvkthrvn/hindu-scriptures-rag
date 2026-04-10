@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hindu Scriptures — Ask the Texts</title>
+    <meta name="theme-color" content="#3D0C0C">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+Devanagari:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+<body data-api-base="{{ api_base|default('') }}">
     <div class="app-shell">
-        <!-- Compact Header -->
         <header class="chat-header">
             <div class="header-left">
                 <span class="header-om">&#x0950;</span>
@@ -21,14 +21,21 @@
                 </div>
             </div>
             <div class="header-right">
+                <span class="auth-guest-hint" id="guestHint" hidden></span>
+                <span class="auth-user-label" id="authUserLabel" hidden></span>
+                {% if open_registration %}
+                <a class="header-btn" id="signupBtn" href="/auth/register" title="Create account">Sign up</a>
+                {% endif %}
+                <a class="header-btn" id="loginBtn" href="/auth/login" title="Sign in">Sign in</a>
+                <button type="button" class="header-btn" id="logoutBtn" title="Sign out" hidden>Sign out</button>
                 <span class="corpus-badge" id="corpusBadge"></span>
+                <button class="theme-toggle" id="themeToggle" title="Toggle theme" aria-label="Toggle dark mode">&#x263E;</button>
+                <button class="header-btn" id="settingsBtn" title="Settings">&#x2699;</button>
                 <button class="header-btn" id="newChatBtn" title="New conversation">New Chat</button>
             </div>
         </header>
 
-        <!-- Chat Messages -->
-        <main class="chat-messages" id="chatMessages">
-            <!-- Welcome state -->
+        <main class="chat-messages" id="chatMessages" role="log" aria-live="polite">
             <div class="welcome" id="welcome">
                 <div class="welcome-om">&#x0950;</div>
                 <h2 class="welcome-title">Ask the Scriptures</h2>
@@ -44,16 +51,32 @@
             </div>
         </main>
 
-        <!-- Input Bar -->
         <footer class="chat-input-bar">
             <div class="input-wrapper">
-                <textarea id="chatInput" rows="1" placeholder="Ask about any Hindu scripture..." autofocus></textarea>
-                <button class="send-btn" id="sendBtn" title="Send">
+                <textarea id="chatInput" rows="1" placeholder="Ask about any Hindu scripture..." autofocus aria-label="Type your question"></textarea>
+                <button class="send-btn" id="sendBtn" title="Send" aria-label="Send message">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 </button>
             </div>
             <p class="input-hint">Searches across Vedas, Upanishads, Gita, Epics &amp; more. Quotes original Sanskrit with translations.</p>
         </footer>
+    </div>
+
+    <div class="drawer-overlay" id="drawerOverlay">
+        <div class="drawer-panel" role="dialog" aria-label="Settings">
+            <div class="drawer-header">
+                <span class="drawer-title">Settings</span>
+                <button class="drawer-close" id="drawerClose" aria-label="Close settings">&times;</button>
+            </div>
+            <div class="drawer-section">
+                <div class="drawer-label">Voice</div>
+                <div id="voiceList"></div>
+            </div>
+            <div class="drawer-section">
+                <div class="drawer-label">Conversations</div>
+                <button class="header-btn" id="clearHistoryBtn" style="width:100%;text-align:center;padding:0.5rem;">Clear All History</button>
+            </div>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>

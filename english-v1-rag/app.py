@@ -5,7 +5,7 @@ Serves two corpora from a single app:
   /main       — Full corpus with Sanskrit  (118k verses, when data exists)
 
 Usage:
-    python english-v1-rag/app.py
+    python english-v1-rag/app.py   # http://0.0.0.0:5002 — English at /, full corpus at /main
 """
 
 import json
@@ -194,7 +194,7 @@ _english_config = get_english_config()
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", api_base="")
 
 
 _make_rag_routes(app, _english_config, ENGLISH_FILTERS)
@@ -233,7 +233,7 @@ _main_config = RAGConfig()
 
 @main_bp.route("/")
 def main_index():
-    return render_template("index.html")
+    return render_template("index.html", api_base="/main")
 
 
 _make_rag_routes(main_bp, _main_config, MAIN_FILTERS)

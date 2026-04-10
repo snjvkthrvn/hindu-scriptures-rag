@@ -1,6 +1,15 @@
 (function () {
   "use strict";
 
+  /** Empty at `/`, `/main` when full-corpus UI is mounted under a blueprint. */
+  var RAG_PREFIX = (document.body.getAttribute("data-api-base") || "").replace(
+    /\/$/,
+    "",
+  );
+  function ragApiUrl(path) {
+    return RAG_PREFIX + path;
+  }
+
   /* ====================================================================
      DOM refs
      ==================================================================== */
@@ -19,7 +28,11 @@
   const authUserLabel = document.getElementById("authUserLabel");
   const logoutBtn = document.getElementById("logoutBtn");
   const loginBtn = document.getElementById("loginBtn");
+  const signupBtn = document.getElementById("signupBtn");
   const guestHint = document.getElementById("guestHint");
+
+  /** When true, chat is loaded/saved via /api/chat/state; else localStorage. */
+  var useServerChat = false;
 
   let conversationHistory = [];
   let isStreaming = false;
@@ -51,21 +64,26 @@
     }
   })();
 
-  function updateLoginHref() {
+  function updateAuthHrefs() {
+    const next = encodeURIComponent(
+      window.location.pathname + window.location.search,
+    );
     if (loginBtn) {
-      loginBtn.href =
-        "/auth/login?next=" +
-        encodeURIComponent(window.location.pathname + window.location.search);
+      loginBtn.href = "/auth/login?next=" + next;
+    }
+    if (signupBtn) {
+      signupBtn.href = "/auth/register?next=" + next;
     }
   }
 
   function refreshAuthBar() {
-    fetch("/api/auth/me", { credentials: "same-origin" })
+    return fetch("/api/auth/me", { credentials: "same-origin" })
       .then(function (r) {
         return r.json();
       })
       .then(function (data) {
-        updateLoginHref();
+        updateAuthHrefs();
+        useServerChat = !!(data && data.logged_in);
         if (data.logged_in && data.email) {
           if (authUserLabel) {
             authUserLabel.textContent = data.email;
@@ -73,6 +91,7 @@
           }
           if (logoutBtn) logoutBtn.hidden = false;
           if (loginBtn) loginBtn.hidden = true;
+          if (signupBtn) signupBtn.hidden = true;
           if (guestHint) guestHint.hidden = true;
         } else {
           if (authUserLabel) {
@@ -81,6 +100,7 @@
           }
           if (logoutBtn) logoutBtn.hidden = true;
           if (loginBtn) loginBtn.hidden = false;
+          if (signupBtn) signupBtn.hidden = false;
           if (guestHint) {
             if (
               typeof data.guest_messages_remaining === "number" &&
@@ -97,11 +117,14 @@
             }
           }
         }
+        return data;
       })
-      .catch(function () {});
+      .catch(function () {
+        useServerChat = false;
+        return {};
+      });
   }
-  updateLoginHref();
-  refreshAuthBar();
+  updateAuthHrefs();
 
   if (logoutBtn) {
     logoutBtn.addEventListener("click", function () {
@@ -111,7 +134,7 @@
         headers: { "Content-Type": "application/json" },
         body: "{}",
       }).then(function () {
-        window.location.href = "/";
+        window.location.href = RAG_PREFIX ? RAG_PREFIX + "/" : "/";
       });
     });
   }
@@ -149,7 +172,7 @@
      Voice picker
      ==================================================================== */
   function loadVoices() {
-    fetch("/api/voices", { credentials: "same-origin" })
+    fetch(ragApiUrl("/api/voices"), { credentials: "same-origin" })
       .then(function (r) {
         return r.json();
       })
@@ -178,48 +201,104 @@
   loadVoices();
 
   /* ====================================================================
-     Conversation persistence (localStorage)
+     Conversation persistence (localStorage for guests, server for logged-in)
      ==================================================================== */
-  var STORAGE_KEY = "hs-conversations";
+  var STORAGE_KEY = "hs-conversations" + (RAG_PREFIX ? "-main" : "");
   var MAX_STORED = 50;
 
-  function loadConversation() {
+  function applyMessagesToUI(data) {
+    if (!Array.isArray(data) || data.length === 0) return;
+    conversationHistory = data;
+    welcome.hidden = true;
+    conversationHistory.forEach(function (msg) {
+      if (msg.role === "user") {
+        addMessage("user", msg.content);
+      } else if (msg.role === "assistant") {
+        var el = addMessage("assistant", "");
+        var contentEl = el.querySelector(".msg-content");
+        contentEl.innerHTML = renderMarkdown(msg.content);
+        addCopyButton(contentEl);
+      }
+    });
+    scrollToBottom();
+  }
+
+  function loadConversationLocal() {
     try {
       var data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
       if (Array.isArray(data) && data.length > 0) {
-        conversationHistory = data;
-        welcome.hidden = true;
-        conversationHistory.forEach(function (msg) {
-          if (msg.role === "user") {
-            addMessage("user", msg.content);
-          } else if (msg.role === "assistant") {
-            var el = addMessage("assistant", "");
-            var contentEl = el.querySelector(".msg-content");
-            contentEl.innerHTML = renderMarkdown(msg.content);
-            addCopyButton(contentEl);
-          }
-        });
-        scrollToBottom();
+        applyMessagesToUI(data);
       }
     } catch (e) {
       /* ignore */
     }
   }
 
+  function loadChatHistoryAfterAuth() {
+    if (!useServerChat) {
+      loadConversationLocal();
+      return;
+    }
+    fetch("/api/chat/state", { credentials: "same-origin" })
+      .then(function (r) {
+        if (r.status === 401) {
+          useServerChat = false;
+          loadConversationLocal();
+          return null;
+        }
+        return r.json();
+      })
+      .then(function (d) {
+        if (!d) return;
+        if (d.messages && d.messages.length > 0) {
+          applyMessagesToUI(d.messages);
+          return;
+        }
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              applyMessagesToUI(parsed);
+              saveConversation();
+              localStorage.removeItem(STORAGE_KEY);
+            }
+          }
+        } catch (e) {
+          /* ignore */
+        }
+      })
+      .catch(function () {
+        loadConversationLocal();
+      });
+  }
+
   function saveConversation() {
+    var trimmed = conversationHistory.slice(-MAX_STORED);
+    if (useServerChat) {
+      fetch("/api/chat/state", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: trimmed }),
+      }).catch(function () {});
+      return;
+    }
     try {
-      var trimmed = conversationHistory.slice(-MAX_STORED);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
     } catch (e) {
       /* ignore */
     }
   }
 
-  loadConversation();
+  refreshAuthBar().then(function () {
+    loadChatHistoryAfterAuth();
+  });
 
   clearHistoryBtn.addEventListener("click", function () {
     localStorage.removeItem(STORAGE_KEY);
     conversationHistory = [];
+    saveConversation();
     chatMessages.innerHTML = "";
     chatMessages.appendChild(welcome);
     welcome.hidden = false;
@@ -229,7 +308,7 @@
   /* ====================================================================
      Corpus badge
      ==================================================================== */
-  fetch("/api/sources", { credentials: "same-origin" })
+  fetch(ragApiUrl("/api/sources"), { credentials: "same-origin" })
     .then(function (r) {
       return r.json();
     })
@@ -346,7 +425,7 @@
 
     showStopBtn();
 
-    fetch("/api/query", {
+    fetch(ragApiUrl("/api/query"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question: question }),
@@ -439,7 +518,7 @@
     var answerText = "";
     var msgBody = contentEl.closest(".msg-body") || contentEl.parentNode;
 
-    fetch("/api/agent/stream", {
+    fetch(ragApiUrl("/api/agent/stream"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
