@@ -28,13 +28,15 @@
                 </div>
             </div>
             <div class="header-right">
-                <span class="auth-guest-hint" id="guestHint" hidden></span>
-                <span class="auth-user-label" id="authUserLabel" hidden></span>
-                {% if open_registration %}
-                <a class="header-btn" id="signupBtn" href="/auth/register" title="Create account">Sign up</a>
-                {% endif %}
-                <a class="header-btn" id="loginBtn" href="/auth/login" title="Sign in">Sign in</a>
-                <button type="button" class="header-btn" id="logoutBtn" title="Sign out" hidden>Sign out</button>
+                <div class="header-auth" id="headerAuth">
+                    <span class="auth-guest-hint" id="guestHint" hidden></span>
+                    <span class="auth-user-label" id="authUserLabel" hidden></span>
+                    {% if open_registration %}
+                    <a class="header-btn" id="signupBtn" href="/auth/register" title="Create account">Sign up</a>
+                    {% endif %}
+                    <a class="header-btn" id="loginBtn" href="/auth/login" title="Sign in">Sign in</a>
+                    <button type="button" class="header-btn" id="logoutBtn" title="Sign out" hidden>Sign out</button>
+                </div>
                 <span class="corpus-badge" id="corpusBadge"></span>
                 <button class="theme-toggle" id="themeToggle" title="Toggle theme" aria-label="Toggle dark mode">&#x263E;</button>
                 <button class="header-btn" id="settingsBtn" title="Settings">&#x2699;</button>

@@ -5,50 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if register_mode %}Create account{% else %}Sign in{% endif %} — Hindu Scriptures</title>
     <meta name="theme-color" content="#3D0C0C">
+    <script>
+    (function () {
+        var t = localStorage.getItem("hs-theme");
+        if (t === "light" || t === "dark") {
+            document.documentElement.setAttribute("data-theme", t);
+            return;
+        }
+        document.documentElement.setAttribute(
+            "data-theme",
+            window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
+        );
+    })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+Devanagari:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="app-shell" style="min-height:100vh;min-height:100dvh;justify-content:center;padding:2rem 1rem;">
-        <main class="auth-panel" style="max-width:400px;margin:0 auto;text-align:center;">
-            <p class="auth-back">
-                <a href="{{ next_url|safe_next_path }}" title="Return to the app without signing in">← Back to app</a>
-            </p>
-            <div class="welcome-om" style="font-size:3rem;margin-bottom:0.5rem;">&#x0950;</div>
+    <div class="app-shell auth-login-shell">
+        <main class="auth-panel">
+            <div class="auth-top-bar">
+                <p class="auth-back">
+                    <a href="{{ next_url|safe_next_path }}" title="Return to the app without signing in">← Back to app</a>
+                </p>
+                <button type="button" class="theme-toggle" id="authThemeToggle" title="Toggle theme" aria-label="Toggle dark mode">&#x263E;</button>
+            </div>
+            <div class="welcome-om auth-login-om">&#x0950;</div>
             <h1 class="welcome-title">{% if register_mode %}Create account{% else %}Sign in{% endif %}</h1>
             {% if error %}
-            <p class="msg-error" style="margin-bottom:0.75rem;">{{ error }}</p>
+            <p class="msg-error auth-error">{{ error }}</p>
             {% endif %}
             {% if google_oauth_enabled and not register_mode %}
-            <div class="auth-google-block" style="margin-top:0.5rem;">
+            <div class="auth-google-block">
                 <a class="auth-google-btn" href="{{ url_for('auth.google_login', next=next_url) }}">Continue with Google</a>
             </div>
             <p class="auth-divider"><span>or</span></p>
             {% endif %}
-            <form method="post" action="{% if register_mode %}{{ url_for('auth.register') }}{% else %}{{ url_for('auth.login') }}{% endif %}" style="text-align:left;margin-top:1.25rem;">
+            <form class="auth-form" method="post" action="{% if register_mode %}{{ url_for('auth.register') }}{% else %}{{ url_for('auth.login') }}{% endif %}">
                 <input type="hidden" name="next" value="{{ next_url | e }}">
-                <label style="display:block;font-size:0.75rem;margin-bottom:0.35rem;">Email</label>
-                <input type="email" name="email" required autocomplete="username" autofocus value="{{ request.form.get('email', '') }}"
-                    style="width:100%;padding:0.55rem;margin-bottom:0.85rem;box-sizing:border-box;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);">
+                <label class="auth-label" for="email">Email</label>
+                <input class="auth-input" id="email" type="email" name="email" required autocomplete="username" autofocus value="{{ request.form.get('email', '') }}">
 
-                <label style="display:block;font-size:0.75rem;margin-bottom:0.35rem;">Password</label>
-                <input type="password" name="password" required autocomplete="{% if register_mode %}new-password{% else %}current-password{% endif %}"
-                    style="width:100%;padding:0.55rem;margin-bottom:0.85rem;box-sizing:border-box;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);">
+                <label class="auth-label" for="password">Password</label>
+                <input class="auth-input" id="password" type="password" name="password" required autocomplete="{% if register_mode %}new-password{% else %}current-password{% endif %}">
 
                 {% if register_mode %}
-                <label style="display:block;font-size:0.75rem;margin-bottom:0.35rem;">Confirm password</label>
-                <input type="password" name="password2" required autocomplete="new-password"
-                    style="width:100%;padding:0.55rem;margin-bottom:0.85rem;box-sizing:border-box;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);">
+                <label class="auth-label" for="password2">Confirm password</label>
+                <input class="auth-input" id="password2" type="password" name="password2" required autocomplete="new-password">
                 {% endif %}
 
-                <button type="submit" class="header-btn" style="width:100%;margin-top:0.5rem;padding:0.6rem;">{% if register_mode %}Register{% else %}Sign in{% endif %}</button>
+                <button type="submit" class="auth-submit header-btn">
+                    {% if register_mode %}Register{% else %}Sign in{% endif %}
+                </button>
             </form>
             {% if not register_mode and open_registration %}
-            <p style="margin-top:1.25rem;"><a href="{{ url_for('auth.register', next=next_url) }}" style="color:var(--saffron);">Create an account</a></p>
+            <p class="auth-alt"><a href="{{ url_for('auth.register', next=next_url) }}">Create an account</a></p>
             {% endif %}
             {% if register_mode %}
-            <p style="margin-top:1.25rem;"><a href="{{ url_for('auth.login', next=next_url) }}" style="color:var(--saffron);">Sign in instead</a></p>
+            <p class="auth-alt"><a href="{{ url_for('auth.login', next=next_url) }}">Already have an account? Sign in</a></p>
             {% endif %}
         </main>
     </div>
+    <script>
+    (function () {
+        var btn = document.getElementById("authThemeToggle");
+        if (!btn) return;
+        function syncIcon() {
+            var t = document.documentElement.getAttribute("data-theme") || "light";
+            btn.textContent = t === "dark" ? "\u2600" : "\u263E";
+        }
+        function applyTheme(theme) {
+            document.documentElement.setAttribute("data-theme", theme);
+            localStorage.setItem("hs-theme", theme);
+            syncIcon();
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.content = theme === "dark" ? "#0F0C0A" : "#3D0C0C";
+        }
+        syncIcon();
+        btn.addEventListener("click", function () {
+            var current = document.documentElement.getAttribute("data-theme") || "light";
+            applyTheme(current === "dark" ? "light" : "dark");
+        });
+    })();
+    </script>
 </body>
 </html>
