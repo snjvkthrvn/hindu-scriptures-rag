@@ -125,6 +125,10 @@ body::before {
     max-width: 860px;
     margin: 0 auto;
     position: relative;
+    /* Header breakpoints must follow this width, not the viewport — the shell is
+       always ≤860px even on ultrawide monitors, so viewport media queries miss. */
+    container-type: inline-size;
+    container-name: shell;
 }
 
 /* ==========================================================================
@@ -133,16 +137,16 @@ body::before {
 .chat-header {
     flex-shrink: 0;
     height: var(--header-h);
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
+    column-gap: 0.5rem;
     padding: 0 1.25rem;
     background: var(--header-bg);
     color: var(--header-text);
     border-bottom: 2px solid var(--gold);
     z-index: 10;
     position: relative;
-    gap: 0.5rem;
     overflow: hidden;
 }
 .chat-header::after {
@@ -163,7 +167,11 @@ body::before {
     display: flex;
     align-items: center;
     gap: 0.65rem;
-    flex-shrink: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+.header-left > div {
+    min-width: 0;
 }
 .header-om {
     font-family: var(--font-sanskrit);
@@ -177,6 +185,9 @@ body::before {
     font-weight: 700;
     letter-spacing: 0.05em;
     line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .header-sub {
     font-family: var(--font-sanskrit);
@@ -191,9 +202,11 @@ body::before {
 .header-right {
     display: flex;
     align-items: center;
+    flex-wrap: nowrap;
     gap: 0.35rem;
-    flex-shrink: 1;
+    flex-shrink: 0;
     min-width: 0;
+    max-width: 100%;
     overflow: hidden;
 }
 .corpus-badge {
@@ -1067,21 +1080,48 @@ body::before {
    RESPONSIVE
    ========================================================================== */
 
-/* --- Tablet and below: hide corpus badge + guest hint --- */
-@media (max-width: 860px) {
+/* --- Header: use app shell width (container), NOT viewport — see .app-shell --- */
+
+/* Corpus badge is the first thing to drop — it competes with auth actions */
+@container shell (max-width: 860px) {
     .corpus-badge { display: none; }
+}
+
+/* Guest hint next — still viewport-agnostic (shell width) */
+@container shell (max-width: 780px) {
     .header-auth .auth-guest-hint { display: none; }
 }
 
-/* --- Small tablet / large phone (481–640px) --- */
-@media (max-width: 640px) {
-    .app-shell { max-width: 100%; }
+@container shell (max-width: 720px) {
+    #signupBtn { display: none; }
+}
+
+@container shell (max-width: 640px) {
     .chat-header { padding: 0 0.75rem; }
     .header-title { font-size: 0.9rem; }
     .header-sub { display: none; }
     .header-om { font-size: 1.5rem; }
-    #signupBtn { display: none; }
     .theme-toggle { width: 26px; height: 26px; font-size: 0.85rem; }
+}
+
+/* Label is long — drop before the 400px phone pass */
+@container shell (max-width: 520px) {
+    #newChatBtn { display: none; }
+}
+
+@container shell (max-width: 400px) {
+    .chat-header { padding: 0 0.5rem; column-gap: 0.3rem; }
+    .header-left { gap: 0.35rem; }
+    .header-om { font-size: 1.3rem; }
+    .header-title { font-size: 0.78rem; letter-spacing: 0.03em; }
+    .header-right { gap: 0.2rem; }
+    #settingsBtn { padding: 0.2rem 0.3rem; }
+    .theme-toggle { width: 24px; height: 24px; font-size: 0.8rem; }
+}
+
+/* --- Small tablet / large phone (481–640px) — body/welcome (viewport) --- */
+@media (max-width: 640px) {
+    .app-shell { max-width: 100%; }
 
     .chat-messages { padding: 1rem 0.65rem; }
     .msg-bubble { max-width: 95%; }
@@ -1103,17 +1143,8 @@ body::before {
     .chat-input-bar { padding: 0.6rem 0.65rem 0.5rem; }
 }
 
-/* --- Phone (≤ 400px) --- */
+/* --- Phone (≤ 400px) — body/welcome (viewport) --- */
 @media (max-width: 400px) {
-    .chat-header { padding: 0 0.5rem; gap: 0.3rem; }
-    .header-left { gap: 0.35rem; }
-    .header-om { font-size: 1.3rem; }
-    .header-title { font-size: 0.78rem; letter-spacing: 0.03em; }
-    .header-right { gap: 0.2rem; }
-    #newChatBtn { display: none; }
-    #settingsBtn { padding: 0.2rem 0.3rem; }
-    .theme-toggle { width: 24px; height: 24px; font-size: 0.8rem; }
-
     .welcome { padding: 1rem 0.5rem; }
     .welcome-om { font-size: 2.4rem; }
     .welcome-title { font-size: 1.1rem; }
