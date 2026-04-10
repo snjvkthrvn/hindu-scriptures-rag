@@ -17,6 +17,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from flask import Blueprint, Flask, Response, jsonify, render_template, request, stream_with_context
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from english_config import get_english_config, ENGLISH_VERSES_FILE
 from auth_backend import register_auth
@@ -24,6 +25,9 @@ from config import RAGConfig, PROJECT_ROOT
 from voices import VOICES
 
 app = Flask(__name__)
+# Railway / reverse proxies send X-Forwarded-Proto; without this, url_for(..., _external=True)
+# can be http:// and Google OAuth returns redirect_uri_mismatch for https://-only URIs.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
 register_auth(app)
 

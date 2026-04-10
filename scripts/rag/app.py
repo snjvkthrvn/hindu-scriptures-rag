@@ -14,12 +14,14 @@ from dataclasses import replace
 from pathlib import Path
 
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from auth_backend import register_auth
 from config import RAGConfig, PROJECT_ROOT
 from voices import VOICES
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
 register_auth(app)
 

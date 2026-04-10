@@ -81,6 +81,22 @@ def _safe_redirect_target(url: str | None) -> str:
     return u
 
 
+def _google_oauth_redirect_uri() -> str:
+    """Redirect URI sent to Google; must match an Authorized redirect URI exactly.
+
+    Gunicorn behind Railway often sets wsgi.url_scheme to http even though users hit https.
+    Google then receives redirect_uri=http://... and rejects it if only https:// is registered.
+    """
+    explicit = (os.environ.get("OAUTH_GOOGLE_REDIRECT_URI") or "").strip()
+    if explicit:
+        return explicit
+    host = (request.host or "").split(":")[0].lower()
+    local = host in ("localhost", "127.0.0.1") or host.startswith("127.")
+    if local:
+        return url_for("auth.google_callback", _external=True)
+    return url_for("auth.google_callback", _external=True, _scheme="https")
+
+
 def _connect() -> sqlite3.Connection:
     _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(_DB_PATH)
@@ -278,7 +294,7 @@ def _register_google_oauth(app) -> None:
     def google_login():
         next_url = _safe_redirect_target(request.args.get("next") or "/")
         session["oauth_next"] = next_url
-        redirect_uri = url_for("auth.google_callback", _external=True)
+        redirect_uri = _google_oauth_redirect_uri()
         return oauth.google.authorize_redirect(redirect_uri)
 
     @auth_bp.route("/google/callback")
