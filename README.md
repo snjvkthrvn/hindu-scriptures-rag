@@ -63,6 +63,24 @@ The chat servers depend on **`requirements-rag.txt`** (Flask, Qdrant, Cohere, An
 
 `docker compose` runs the English app on **5002** (`docker-compose.yml`). Copy **`.env.example`** to `.env` and set API keys (and optional auth variables).
 
+### Welcome screen — Option B (verse card + prompts)
+
+**Status:** Spec agreed (brainstorming, 2026-04-10). Implementation tracked below.
+
+**Goal:** Add a daily curated **verse card** and two **CTAs** (“Explain this verse simply”, “How does this apply today?”) that **only prime** the input. Keep the existing **six** starter chips unchanged (they still fill the question and send). Rotate verse by **local calendar day** using `dayOfYear % N` over a JSON list (`N` ≥ 30). If JSON fails to load, hide the verse block only.
+
+**Data:** `scripts/rag/static/data/welcome-verses.json` — array of `{ "ref", "eng", "dev"?, "iast"? }`. Copy the file to `english-v1-rag/static/data/` and update both `templates/index.html`, `static/css/style.css`, and `static/js/app.js` (the English app mirrors `scripts/rag/static`).
+
+**Out of scope for this increment:** Thread drawer, 3-state theme, streaming/answer-footer redesign (see `.claude/plans/2026-04-09-frontend-ux-redesign-design.md`).
+
+**Implementation checklist**
+
+- [ ] Add `welcome-verses.json` with at least 30 corpus-safe entries.
+- [ ] Mark up verse region + CTAs in `scripts/rag/templates/index.html` and `english-v1-rag/templates/index.html`.
+- [ ] Style `.welcome-verse` / CTAs in both `style.css` copies.
+- [ ] In `app.js` (both copies): fetch JSON, compute index, render text, bind CTAs to prime `chatInput` only; ensure welcome hidden logic still works when sending first message.
+- [ ] Manual test: same verse same day; CTAs prime; chips auto-send; dark theme readable.
+
 ## Directory Structure
 
 ```
