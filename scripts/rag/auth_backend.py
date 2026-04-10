@@ -299,6 +299,7 @@ def _register_google_oauth(app) -> None:
     if not google_oauth_configured():
         return
     from authlib.integrations.base_client import OAuthError
+    from authlib.integrations.base_client.errors import MismatchingStateError
     from authlib.integrations.flask_client import OAuth
 
     oauth = OAuth(app)
@@ -323,6 +324,16 @@ def _register_google_oauth(app) -> None:
     def google_callback():
         try:
             token = oauth.google.authorize_access_token()
+        except MismatchingStateError as e:
+            # Session cookie did not round-trip (lost state). Common: www vs apex domain,
+            # HTTPS mismatch with SESSION_COOKIE_SECURE, or FLASK_SECRET_KEY changing.
+            logger.warning(
+                "Google OAuth state lost (session cookie): %s. "
+                "Check same site URL as OAUTH_PUBLIC_BASE_URL, FLASK_SECRET_KEY stable, "
+                "and SESSION_COOKIE_SECURE only over HTTPS.",
+                e,
+            )
+            return redirect(url_for("auth.login", error="google_session"))
         except OAuthError as e:
             logger.warning(
                 "Google OAuth failed: error=%s description=%s",
@@ -374,6 +385,10 @@ def register_auth(app) -> None:
     """Register blueprint, DB init, before_request guard, and optional bootstrap."""
     init_db()
     maybe_bootstrap_admin()
+
+    # OAuth return from Google is a top-level GET from another site; Lax allows the
+    # session cookie (where Authlib stores OAuth state) to be sent. Do not use Strict.
+    app.config.setdefault("SESSION_COOKIE_SAMESITE", "Lax")
 
     # CSRF: only validate where we call validate_csrf() (HTML forms + logout fetch header).
     app.config.setdefault("WTF_CSRF_CHECK_DEFAULT", False)
@@ -540,6 +555,12 @@ def login():
         qe = request.args.get("error")
         if qe == "google_failed":
             err = "Google sign-in failed. Try again."
+        elif qe == "google_session":
+            err = (
+                "Sign-in could not finish (browser session was lost after Google). "
+                "Use the exact site URL you added in Google Cloud (same www vs non-www), "
+                "set FLASK_SECRET_KEY in production, and OAUTH_PUBLIC_BASE_URL to your HTTPS origin."
+            )
         elif qe == "google_email":
             err = "Google did not return an email for this account."
         elif qe == "google_link":
