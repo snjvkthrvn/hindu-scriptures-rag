@@ -29,6 +29,7 @@ def run_agent(
     question: str,
     config: RAGConfig | None = None,
     memory: ConversationMemory | None = None,
+    voice: str | None = None,
 ) -> dict:
     """Run the agentic RAG loop.
 
@@ -41,6 +42,10 @@ def run_agent(
     if config is None:
         config = get_english_config()
 
+    system_prompt = AGENT_SYSTEM_PROMPT.format(
+        voice_block=get_voice_prompt(voice),
+    )
+
     if memory is None:
         memory = ConversationMemory(window=config.conversation_window)
 
@@ -52,7 +57,7 @@ def run_agent(
 
     for turn in range(max_turns):
         response = llm_module.generate_with_tools(
-            system=AGENT_SYSTEM_PROMPT,
+            system=system_prompt,
             messages=messages,
             tools=TOOL_DEFINITIONS,
             config=config,

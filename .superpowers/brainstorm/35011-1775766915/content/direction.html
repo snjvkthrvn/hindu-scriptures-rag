@@ -1,0 +1,110 @@
+<h2>Which direction should we pull toward?</h2>
+<p class="subtitle">The app could optimize for very different kinds of users. Before picking specific improvements, let's agree on <em>who</em> we're building for. Click the direction that feels right — you can also pick more than one if they complement each other.</p>
+
+<div class="cards" data-multiselect>
+
+  <div class="card" data-choice="companion" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: linear-gradient(135deg, #FDF5E6, #F0D78C); padding: 18px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; gap: 6px;">
+        <div style="width: 28%; background: rgba(107,29,29,0.85); border-radius: 4px; padding: 6px 4px; color: #FDF5E6; font-size: 7px; line-height: 1.3;">
+          <div style="opacity: 0.6; font-size: 5px; letter-spacing: 0.1em; margin-bottom: 3px;">TODAY</div>
+          <div style="margin-bottom: 2px;">On dharma</div>
+          <div>What is karma?</div>
+          <div style="opacity: 0.6; font-size: 5px; letter-spacing: 0.1em; margin: 6px 0 3px;">YESTERDAY</div>
+          <div>Nachiketa story</div>
+        </div>
+        <div style="flex: 1; background: #FFFDF7; border-radius: 4px; padding: 6px; font-size: 7px; line-height: 1.4;">
+          <div style="font-weight: 700; color: #6B1D1D; font-size: 8px; margin-bottom: 3px;">On dharma</div>
+          <div style="color: #2D1810;">Krishna tells Arjuna that dharma...</div>
+          <div style="border-left: 2px solid #E8820C; padding: 3px 4px; margin-top: 4px; background: rgba(232,130,12,0.06); font-size: 6px;">
+            <b style="color: #6B1D1D;">BG 2.47</b> — karmaṇy eva...
+          </div>
+          <div style="margin-top: 5px; padding-top: 4px; border-top: 1px solid rgba(212,168,67,0.3); font-size: 6px; color: #7A5C4F;">
+            <div style="font-weight: 700; color: #6B1D1D; letter-spacing: 0.08em;">SOURCES</div>
+            <div style="margin-top: 2px;">📖 BG 2.47 &nbsp; 📖 BG 3.35</div>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 4px; font-size: 6px;">
+        <div style="background: #6B1D1D; color: #FDF5E6; padding: 2px 6px; border-radius: 10px;">📋 Copy</div>
+        <div style="background: #FFFDF7; color: #6B1D1D; padding: 2px 6px; border-radius: 10px; border: 1px solid rgba(212,168,67,0.4);">🔁 Regenerate</div>
+        <div style="background: #FFFDF7; color: #6B1D1D; padding: 2px 6px; border-radius: 10px; border: 1px solid rgba(212,168,67,0.4);">↗ Share</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>📿 The Reading Companion</h3>
+      <p><b>For the daily seeker.</b> History sidebar, persistent threads, copy/share/regenerate actions, source citations at the bottom of every answer, suggested follow-ups, dark mode for evening reading. Optimizes for <em>coming back tomorrow</em>.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="scholar" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: linear-gradient(135deg, #FFFDF7, #FDF5E6); padding: 18px; display: flex; gap: 6px;">
+      <div style="width: 32%; background: #FFFDF7; border-radius: 4px; padding: 6px; font-size: 6px; line-height: 1.4; border: 1px solid rgba(212,168,67,0.3);">
+        <div style="font-weight: 700; color: #6B1D1D; letter-spacing: 0.08em; font-size: 5px;">BROWSE</div>
+        <div style="margin-top: 4px; color: #2D1810;">▸ Vedas</div>
+        <div style="color: #2D1810;">▾ Upanishads</div>
+        <div style="padding-left: 6px; color: #7A5C4F;">• Katha</div>
+        <div style="padding-left: 6px; color: #7A5C4F;">• Mundaka</div>
+        <div style="color: #2D1810;">▸ Bhagavad Gita</div>
+        <div style="color: #2D1810;">▸ Mahabharata</div>
+        <div style="font-weight: 700; color: #6B1D1D; letter-spacing: 0.08em; font-size: 5px; margin-top: 6px;">SCHOOL</div>
+        <div style="margin-top: 2px; color: #E8820C;">✓ Advaita</div>
+        <div style="color: #7A5C4F;">○ Dvaita</div>
+        <div style="color: #7A5C4F;">○ Vishishta</div>
+      </div>
+      <div style="flex: 1; background: #FFFDF7; border-radius: 4px; padding: 6px; font-size: 6px; line-height: 1.4;">
+        <div style="background: rgba(232,130,12,0.08); padding: 3px 5px; border-radius: 3px; font-family: monospace; font-size: 5px; color: #E8820C;">/compare BG 2.47 across schools</div>
+        <div style="margin-top: 5px; color: #2D1810; font-weight: 700; font-size: 7px;">Comparison Table</div>
+        <div style="margin-top: 3px; display: flex; gap: 3px;">
+          <div style="flex: 1; background: rgba(107,29,29,0.05); padding: 3px; border-radius: 2px;">
+            <div style="color: #6B1D1D; font-weight: 700; font-size: 5px;">Shankara</div>
+            <div style="color: #7A5C4F; font-size: 5px;">non-dual...</div>
+          </div>
+          <div style="flex: 1; background: rgba(107,29,29,0.05); padding: 3px; border-radius: 2px;">
+            <div style="color: #6B1D1D; font-weight: 700; font-size: 5px;">Ramanuja</div>
+            <div style="color: #7A5C4F; font-size: 5px;">qualified...</div>
+          </div>
+          <div style="flex: 1; background: rgba(107,29,29,0.05); padding: 3px; border-radius: 2px;">
+            <div style="color: #6B1D1D; font-weight: 700; font-size: 5px;">Madhva</div>
+            <div style="color: #7A5C4F; font-size: 5px;">dualist...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>📚 The Scholar's Workbench</h3>
+      <p><b>For the researcher.</b> Browse sidebar (filter by scripture, school, language), slash commands (<code>/compare</code>, <code>/deep</code>, <code>/story</code>), verse lookup (paste <code>BG 2.47</code> to see it directly), school-by-school comparison views, structured output with metadata. Optimizes for <em>finding and cross-referencing</em>.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="sacred" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: linear-gradient(135deg, #1a0a0a, #3D0C0C); padding: 18px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden;">
+      <div style="position: absolute; right: -20px; top: -20px; width: 100px; height: 100px; border-radius: 50%; background: radial-gradient(circle, rgba(232,130,12,0.15), transparent 70%);"></div>
+      <div style="text-align: center; color: #F0D78C; font-family: serif; font-size: 22px; opacity: 0.9; line-height: 1;">ॐ</div>
+      <div style="background: rgba(253,245,230,0.06); border: 1px solid rgba(240,215,140,0.2); border-radius: 6px; padding: 8px; backdrop-filter: blur(4px);">
+        <div style="font-family: serif; color: #F0D78C; font-size: 10px; text-align: center; letter-spacing: 0.05em; line-height: 1.3;">कर्मण्येवाधिकारस्ते<br>मा फलेषु कदाचन</div>
+        <div style="border-top: 1px solid rgba(240,215,140,0.25); margin: 6px 0; position: relative;">
+          <div style="position: absolute; left: 50%; top: -4px; transform: translateX(-50%); background: #3D0C0C; color: #D4A843; font-size: 6px; padding: 0 4px;">✦</div>
+        </div>
+        <div style="font-style: italic; color: #FDF5E6; font-size: 7px; text-align: center; opacity: 0.85;">karmaṇy evādhikāras te mā phaleṣu kadācana</div>
+        <div style="color: #FDF5E6; font-size: 6px; text-align: center; opacity: 0.7; margin-top: 3px;">You have a right to action alone, never to its fruits.</div>
+        <div style="text-align: right; margin-top: 4px;"><span style="color: #D4A843; font-size: 5px; letter-spacing: 0.1em;">— BG 2.47</span></div>
+      </div>
+      <div style="display: flex; justify-content: center; gap: 4px;">
+        <div style="width: 4px; height: 4px; background: #D4A843; border-radius: 50%; opacity: 0.8;"></div>
+        <div style="width: 4px; height: 4px; background: #D4A843; border-radius: 50%; opacity: 0.5;"></div>
+        <div style="width: 4px; height: 4px; background: #D4A843; border-radius: 50%; opacity: 0.3;"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>🪔 The Sacred Interface</h3>
+      <p><b>For the reverent reader.</b> Dark mode with candlelight palette, dramatic Devanagari typography, subtle mandala/yantra watermarks, gentle verse-reveal animations, distinctive per-scripture visual identities, PWA install for daily reading. Optimizes for <em>feeling the weight of the text</em>.</p>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top: 28px; padding: 16px 20px; background: rgba(232,130,12,0.06); border-left: 3px solid #E8820C; border-radius: 4px;">
+  <div class="label">My recommendation</div>
+  <p style="margin-top: 6px;"><b>Reading Companion + Sacred Interface</b>. They reinforce each other — the persistence/actions make the app worth returning to, and the typography/dark mode make each return feel meaningful. Scholar's Workbench is powerful but adds complexity (new routes, sidebar navigation) that might dilute the meditative feel. Could be a v2 direction.</p>
+</div>

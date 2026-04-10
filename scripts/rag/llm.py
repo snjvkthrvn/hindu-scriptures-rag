@@ -53,6 +53,34 @@ def generate(
     )
 
 
+def generate_haiku(
+    system: str,
+    messages: list[dict],
+    config: RAGConfig | None = None,
+    *,
+    max_tokens: int = 2048,
+    temperature: float = 0.2,
+) -> str:
+    """Call Claude Haiku for lightweight tasks (e.g. Sanskrit glosses).
+
+    Main answer generation should use :func:`generate` with ``anthropic_model``.
+    """
+    if config is None:
+        config = RAGConfig()
+
+    client = get_client(config)
+    response = client.messages.create(
+        model=config.anthropic_haiku_model,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        system=system,
+        messages=messages,
+    )
+    return "".join(
+        block.text for block in response.content if block.type == "text"
+    )
+
+
 def generate_with_tools(
     system: str,
     messages: list[dict],

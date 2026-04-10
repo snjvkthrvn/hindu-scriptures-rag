@@ -9,6 +9,7 @@ from english_config import get_english_config  # noqa: F401 — side-effect: pat
 from config import RAGConfig, LLMProvider
 from search import search, format_context
 from prompt_templates import SYSTEM_PROMPT, QUERY_PROMPT_TEMPLATE
+from sanskrit_gloss import augment_context_with_sanskrit_gloss
 import llm as llm_module
 
 
@@ -30,6 +31,7 @@ def query_rag(
         }
 
     context = format_context(results)
+    context = augment_context_with_sanskrit_gloss(context, results, question, config)
     user_prompt = QUERY_PROMPT_TEMPLATE.format(context=context, question=question)
 
     if config.llm_provider == LLMProvider.ANTHROPIC:

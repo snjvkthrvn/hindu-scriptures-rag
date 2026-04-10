@@ -1,0 +1,141 @@
+<h2>How should history and navigation live alongside the chat?</h2>
+<p class="subtitle">The current app is a centered 860px column — one sacred manuscript. Adding history is a layout decision, and the choice sets the tone: <em>meditative single-column</em> vs. <em>tool-like workspace</em>. These are three ways to hold both.</p>
+
+<div class="cards">
+
+  <!-- OPTION A: OVERLAY DRAWER -->
+  <div class="card" data-choice="drawer" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #FDF5E6; padding: 14px; position: relative;">
+      <div style="background: #FFFDF7; border: 1px solid rgba(212,168,67,0.3); border-radius: 4px; overflow: hidden;">
+        <!-- Header -->
+        <div style="background: #3D0C0C; color: #F0D78C; padding: 5px 8px; display: flex; align-items: center; gap: 5px; font-size: 6px;">
+          <div style="font-size: 8px;">☰</div>
+          <div style="font-size: 9px;">ॐ</div>
+          <div style="font-weight: 700; letter-spacing: 0.1em;">HINDU SCRIPTURES</div>
+          <div style="flex: 1;"></div>
+          <div style="opacity: 0.7;">118K verses</div>
+        </div>
+        <!-- Main content (centered column) -->
+        <div style="padding: 10px 30px; min-height: 90px;">
+          <div style="background: linear-gradient(135deg, #6B1D1D, #3D0C0C); color: #FDF5E6; padding: 5px 7px; border-radius: 6px; font-size: 5px; margin-left: auto; width: 60%; text-align: right;">What is dharma?</div>
+          <div style="background: #FDF5E6; border: 1px solid rgba(212,168,67,0.25); border-radius: 6px; padding: 5px 7px; margin-top: 4px; font-size: 5px; line-height: 1.5; color: #2D1810;">
+            Krishna tells Arjuna that dharma is the eternal law...
+            <div style="border-left: 2px solid #E8820C; background: rgba(232,130,12,0.06); padding: 2px 4px; margin-top: 3px; border-radius: 0 2px 2px 0;">
+              <b style="color: #6B1D1D;">BG 2.47</b> — karmaṇy eva...
+            </div>
+          </div>
+        </div>
+        <!-- Input -->
+        <div style="background: #FFFDF7; border-top: 1px solid rgba(212,168,67,0.2); padding: 4px 30px;">
+          <div style="background: #FDF5E6; border: 1px solid rgba(212,168,67,0.3); border-radius: 4px; padding: 3px 5px; font-size: 5px; color: #A08878;">Ask about any Hindu scripture...</div>
+        </div>
+      </div>
+      <!-- Floating history drawer hint -->
+      <div style="position: absolute; top: 35px; left: 20px; width: 62px; background: #FFFDF7; border: 1px solid rgba(212,168,67,0.5); border-right: 2px solid #E8820C; border-radius: 0 6px 6px 0; padding: 5px; box-shadow: 3px 0 10px rgba(61,12,12,0.15); font-size: 5px;">
+        <div style="color: #6B1D1D; font-weight: 700; letter-spacing: 0.08em; font-size: 4px;">HISTORY</div>
+        <div style="margin-top: 3px; color: #E8820C;">• On dharma</div>
+        <div style="color: #7A5C4F;">• Karma basics</div>
+        <div style="color: #7A5C4F;">• Nachiketa</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Overlay Drawer</h3>
+      <p><b>Hidden by default, slides in when summoned.</b> A small ☰ button in the header opens a slide-over drawer from the left. The 860px centered column stays exactly as it is — untouched, meditative. On mobile, identical behavior. History is available but <em>invisible until asked for</em>.</p>
+      <div style="margin-top: 6px; font-size: 12px;"><b style="color: #6B1D1D;">Feels like:</b> a single sacred manuscript with a bookmark ribbon tucked behind the cover.</div>
+    </div>
+  </div>
+
+  <!-- OPTION B: COLLAPSIBLE RAIL -->
+  <div class="card" data-choice="rail" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #FDF5E6; padding: 14px;">
+      <div style="background: #FFFDF7; border: 1px solid rgba(212,168,67,0.3); border-radius: 4px; overflow: hidden; display: flex;">
+        <!-- Sidebar rail -->
+        <div style="width: 40px; background: #3D0C0C; color: #F0D78C; padding: 8px 0; display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 10px;">
+          <div>ॐ</div>
+          <div style="width: 20px; height: 1px; background: rgba(240,215,140,0.25);"></div>
+          <div style="font-size: 8px;">+</div>
+          <div style="font-size: 7px;">☰</div>
+          <div style="flex: 1;"></div>
+          <div style="font-size: 7px; opacity: 0.6;">☾</div>
+        </div>
+        <!-- Main content -->
+        <div style="flex: 1;">
+          <div style="background: #3D0C0C; color: #F0D78C; padding: 5px 8px; font-size: 6px; display: flex; align-items: center; gap: 5px;">
+            <div style="font-weight: 700; letter-spacing: 0.1em;">HINDU SCRIPTURES</div>
+            <div style="flex: 1;"></div>
+            <div style="opacity: 0.7;">118K verses</div>
+          </div>
+          <div style="padding: 10px 20px; min-height: 90px;">
+            <div style="background: linear-gradient(135deg, #6B1D1D, #3D0C0C); color: #FDF5E6; padding: 5px 7px; border-radius: 6px; font-size: 5px; margin-left: auto; width: 65%; text-align: right;">What is dharma?</div>
+            <div style="background: #FDF5E6; border: 1px solid rgba(212,168,67,0.25); border-radius: 6px; padding: 5px 7px; margin-top: 4px; font-size: 5px; line-height: 1.5; color: #2D1810;">
+              Krishna tells Arjuna that dharma is the eternal law...
+              <div style="border-left: 2px solid #E8820C; background: rgba(232,130,12,0.06); padding: 2px 4px; margin-top: 3px;">
+                <b style="color: #6B1D1D;">BG 2.47</b> — karmaṇy eva...
+              </div>
+            </div>
+          </div>
+          <div style="background: #FFFDF7; border-top: 1px solid rgba(212,168,67,0.2); padding: 4px 20px;">
+            <div style="background: #FDF5E6; border: 1px solid rgba(212,168,67,0.3); border-radius: 4px; padding: 3px 5px; font-size: 5px; color: #A08878;">Ask about any Hindu scripture...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Collapsible Rail</h3>
+      <p><b>Always-visible thin rail, expands on demand.</b> A 40-60px rail on the left holds icons: Om (home), new chat, history toggle, theme toggle. Click the ☰ icon to expand to a full 260px sidebar with thread list. Main content stays at ~760px. On mobile, rail collapses to header icons only.</p>
+      <div style="margin-top: 6px; font-size: 12px;"><b style="color: #6B1D1D;">Feels like:</b> a temple with a discreet altar in the corner — always present, never intrusive.</div>
+    </div>
+  </div>
+
+  <!-- OPTION C: FULL SIDEBAR -->
+  <div class="card" data-choice="full" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #FDF5E6; padding: 14px;">
+      <div style="background: #FFFDF7; border: 1px solid rgba(212,168,67,0.3); border-radius: 4px; overflow: hidden; display: flex;">
+        <!-- Full sidebar -->
+        <div style="width: 90px; background: #3D0C0C; color: #F0D78C; padding: 8px; font-size: 5px; line-height: 1.5;">
+          <div style="display: flex; align-items: center; gap: 3px; font-size: 7px;">
+            <span>ॐ</span><span style="font-weight: 700;">HINDU</span>
+          </div>
+          <div style="border: 1px solid rgba(240,215,140,0.3); border-radius: 3px; padding: 2px 4px; margin-top: 6px; text-align: center; font-size: 4px; letter-spacing: 0.1em;">+ NEW CHAT</div>
+          <div style="font-size: 4px; opacity: 0.5; letter-spacing: 0.1em; margin-top: 8px;">TODAY</div>
+          <div style="background: rgba(232,130,12,0.2); border-left: 2px solid #E8820C; padding: 2px 3px; margin-top: 3px; border-radius: 0 2px 2px 0;">On dharma</div>
+          <div style="padding: 2px 3px; opacity: 0.75;">What is karma?</div>
+          <div style="font-size: 4px; opacity: 0.5; letter-spacing: 0.1em; margin-top: 6px;">YESTERDAY</div>
+          <div style="padding: 2px 3px; opacity: 0.75;">Nachiketa story</div>
+          <div style="padding: 2px 3px; opacity: 0.75;">Brahman talk</div>
+        </div>
+        <!-- Main content -->
+        <div style="flex: 1;">
+          <div style="background: #3D0C0C; color: #F0D78C; padding: 5px 8px; font-size: 6px; display: flex; align-items: center;">
+            <div style="font-weight: 700; letter-spacing: 0.1em;">ON DHARMA</div>
+            <div style="flex: 1;"></div>
+            <div style="opacity: 0.7;">118K verses</div>
+          </div>
+          <div style="padding: 10px 14px; min-height: 90px;">
+            <div style="background: linear-gradient(135deg, #6B1D1D, #3D0C0C); color: #FDF5E6; padding: 5px 7px; border-radius: 6px; font-size: 5px; margin-left: auto; width: 70%; text-align: right;">What is dharma?</div>
+            <div style="background: #FDF5E6; border: 1px solid rgba(212,168,67,0.25); border-radius: 6px; padding: 5px 7px; margin-top: 4px; font-size: 5px; line-height: 1.5; color: #2D1810;">
+              Krishna tells Arjuna that dharma is the eternal law...
+              <div style="border-left: 2px solid #E8820C; background: rgba(232,130,12,0.06); padding: 2px 4px; margin-top: 3px;">
+                <b style="color: #6B1D1D;">BG 2.47</b> — karmaṇy eva...
+              </div>
+            </div>
+          </div>
+          <div style="background: #FFFDF7; border-top: 1px solid rgba(212,168,67,0.2); padding: 4px 14px;">
+            <div style="background: #FDF5E6; border: 1px solid rgba(212,168,67,0.3); border-radius: 4px; padding: 3px 5px; font-size: 5px; color: #A08878;">Ask about any Hindu scripture...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Full Sidebar (ChatGPT-style)</h3>
+      <p><b>260px sidebar always visible</b> with full thread titles, grouped by day. Main content narrows to ~700-760px. On mobile, sidebar collapses entirely to a hamburger drawer. Most conventional — most obviously a "chat app."</p>
+      <div style="margin-top: 6px; font-size: 12px;"><b style="color: #6B1D1D;">Feels like:</b> a scholar's workbench — efficient, familiar, but loses some of the meditative singularity.</div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top: 28px; padding: 16px 20px; background: rgba(232,130,12,0.06); border-left: 3px solid #E8820C; border-radius: 4px;">
+  <div class="label">My recommendation</div>
+  <p style="margin-top: 6px;"><b>Option A — Overlay Drawer.</b> It's the only option that preserves the current "single sacred column" feel you've already built carefully. The drawer pattern is also <em>consistent across desktop and mobile</em>, which simplifies CSS enormously. The trade-off is that history is one click away instead of zero — but for a reading-focused app where you're mostly <em>in</em> a thread, not switching between them, that's the right default. Option B is my second choice if you want the thread list to feel more present.</p>
+</div>

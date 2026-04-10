@@ -1,0 +1,154 @@
+<h2>How should the answer footer be arranged?</h2>
+<p class="subtitle">Each answer needs to hold <b>citations</b> (verses cited), <b>actions</b> (copy, regenerate, go deeper, simpler), and <b>follow-ups</b> (suggested next questions). These compete for the same real estate. Three arrangements — all shown in light theme for clarity. Same answer body in each.</p>
+
+<div class="cards">
+
+  <!-- OPTION A: STACKED -->
+  <div class="card" data-choice="stacked" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #FDF5E6; padding: 16px 12px;">
+      <!-- Answer body (simplified) -->
+      <div style="background: #FFFDF7; border: 1px solid rgba(212,168,67,0.3); border-radius: 4px 10px 10px 10px; padding: 10px 12px; font-family: Georgia, serif;">
+        <div style="font-size: 8px; line-height: 1.6; color: #2D1810;">
+          Krishna's answer to Arjuna is the famous formulation of karma yoga — act without attachment to fruits...
+        </div>
+        <div style="background: linear-gradient(180deg, #FDF5E6, #FFFDF7); border: 1px solid rgba(212,168,67,0.4); border-radius: 3px; padding: 5px 6px; margin: 6px 0; text-align: center;">
+          <div style="color: #6B1D1D; font-size: 4px; font-weight: 700; letter-spacing: 0.15em;">BHAGAVAD GĪTĀ · 2.47</div>
+          <div style="color: #3D0C0C; font-size: 8px; margin-top: 2px;">कर्मण्येवाधिकारस्ते</div>
+        </div>
+        <div style="font-size: 8px; line-height: 1.6; color: #2D1810;">The teaching closes with "In essence" — act, but without craving.</div>
+
+        <!-- === FOOTER === -->
+        <!-- 1. Citations row -->
+        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(212,168,67,0.25);">
+          <div style="font-size: 4px; color: #6B1D1D; font-weight: 700; letter-spacing: 0.15em;">CITED</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px;">
+            <div style="background: rgba(232,130,12,0.1); border: 1px solid rgba(232,130,12,0.3); color: #E8820C; font-size: 5px; padding: 2px 5px; border-radius: 8px;">BG 2.47</div>
+            <div style="background: rgba(232,130,12,0.1); border: 1px solid rgba(232,130,12,0.3); color: #E8820C; font-size: 5px; padding: 2px 5px; border-radius: 8px;">BG 3.35</div>
+            <div style="background: rgba(232,130,12,0.1); border: 1px solid rgba(232,130,12,0.3); color: #E8820C; font-size: 5px; padding: 2px 5px; border-radius: 8px;">Katha Up. 1.2.23</div>
+            <div style="background: rgba(232,130,12,0.1); border: 1px solid rgba(232,130,12,0.3); color: #E8820C; font-size: 5px; padding: 2px 5px; border-radius: 8px;">MBh 12.259.5</div>
+          </div>
+        </div>
+        <!-- 2. Action row -->
+        <div style="display: flex; gap: 4px; margin-top: 8px;">
+          <div style="background: transparent; border: 1px solid rgba(107,29,29,0.25); color: #6B1D1D; font-size: 5px; padding: 3px 6px; border-radius: 4px;">📋 Copy</div>
+          <div style="background: transparent; border: 1px solid rgba(107,29,29,0.25); color: #6B1D1D; font-size: 5px; padding: 3px 6px; border-radius: 4px;">🔁 Regenerate</div>
+          <div style="background: transparent; border: 1px solid rgba(107,29,29,0.25); color: #6B1D1D; font-size: 5px; padding: 3px 6px; border-radius: 4px;">↓ Deeper</div>
+          <div style="background: transparent; border: 1px solid rgba(107,29,29,0.25); color: #6B1D1D; font-size: 5px; padding: 3px 6px; border-radius: 4px;">☀ Simpler</div>
+        </div>
+      </div>
+
+      <!-- 3. Follow-ups OUTSIDE the bubble -->
+      <div style="margin-top: 8px; padding-left: 6px;">
+        <div style="font-size: 4px; color: #7A5C4F; letter-spacing: 0.1em; margin-bottom: 3px;">CONTINUE THE THREAD</div>
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <div style="background: #FFFDF7; border: 1px solid rgba(212,168,67,0.35); border-radius: 10px; padding: 4px 7px; font-size: 6px; color: #2D1810;">→ How does Shankara interpret BG 2.47 differently from Ramanuja?</div>
+          <div style="background: #FFFDF7; border: 1px solid rgba(212,168,67,0.35); border-radius: 10px; padding: 4px 7px; font-size: 6px; color: #2D1810;">→ Show more verses on nishkama karma</div>
+          <div style="background: #FFFDF7; border: 1px solid rgba(212,168,67,0.35); border-radius: 10px; padding: 4px 7px; font-size: 6px; color: #2D1810;">→ What does the Upanishads say about action?</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Stacked</h3>
+      <p>Citations inside the bubble (as clickable chips at the bottom), action row just below, <b>follow-ups live OUTSIDE the bubble as standalone chip-buttons</b>. Clear hierarchy: answer → citations → actions → "what's next". Feels like a well-structured document footer.</p>
+      <div style="margin-top: 6px; font-size: 11px; color: #7A5C4F;"><b>Pros:</b> clearest hierarchy, follow-ups feel like invitations, not part of the answer. <b>Cons:</b> takes the most vertical space.</div>
+    </div>
+  </div>
+
+  <!-- OPTION B: COMPACT HOVER -->
+  <div class="card" data-choice="hover" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #FDF5E6; padding: 16px 12px;">
+      <div style="background: #FFFDF7; border: 1px solid rgba(212,168,67,0.3); border-radius: 4px 10px 10px 10px; padding: 10px 12px; font-family: Georgia, serif; position: relative;">
+        <!-- Small corner action pills (hover-visible) -->
+        <div style="position: absolute; top: 6px; right: 6px; display: flex; gap: 2px; opacity: 0.6;">
+          <div style="background: rgba(255,253,247,0.9); border: 1px solid rgba(212,168,67,0.35); border-radius: 3px; padding: 2px 4px; font-size: 5px; color: #6B1D1D;">📋</div>
+          <div style="background: rgba(255,253,247,0.9); border: 1px solid rgba(212,168,67,0.35); border-radius: 3px; padding: 2px 4px; font-size: 5px; color: #6B1D1D;">🔁</div>
+          <div style="background: rgba(255,253,247,0.9); border: 1px solid rgba(212,168,67,0.35); border-radius: 3px; padding: 2px 4px; font-size: 5px; color: #6B1D1D;">⋯</div>
+        </div>
+        <div style="font-size: 8px; line-height: 1.6; color: #2D1810;">
+          Krishna's answer to Arjuna is the famous formulation of karma yoga — act without attachment to fruits...
+        </div>
+        <div style="background: linear-gradient(180deg, #FDF5E6, #FFFDF7); border: 1px solid rgba(212,168,67,0.4); border-radius: 3px; padding: 5px 6px; margin: 6px 0; text-align: center;">
+          <div style="color: #6B1D1D; font-size: 4px; font-weight: 700; letter-spacing: 0.15em;">BHAGAVAD GĪTĀ · 2.47</div>
+          <div style="color: #3D0C0C; font-size: 8px; margin-top: 2px;">कर्मण्येवाधिकारस्ते</div>
+        </div>
+        <div style="font-size: 8px; line-height: 1.6; color: #2D1810;">The teaching closes with "In essence" — act, but without craving.</div>
+
+        <!-- Collapsed "Sources" expander at bottom -->
+        <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(212,168,67,0.2); display: flex; align-items: center; gap: 4px;">
+          <div style="font-size: 5px; color: #6B1D1D; font-weight: 700; letter-spacing: 0.1em;">▸ 4 SOURCES</div>
+          <div style="flex: 1; height: 1px;"></div>
+          <div style="font-size: 5px; color: #7A5C4F;">hover for actions · click to expand</div>
+        </div>
+      </div>
+
+      <!-- Follow-ups: inline chips, wrapped -->
+      <div style="margin-top: 8px; padding-left: 6px; display: flex; flex-wrap: wrap; gap: 3px;">
+        <div style="background: rgba(232,130,12,0.08); border: 1px solid rgba(232,130,12,0.3); color: #E8820C; font-size: 5px; padding: 3px 6px; border-radius: 10px;">Shankara vs Ramanuja?</div>
+        <div style="background: rgba(232,130,12,0.08); border: 1px solid rgba(232,130,12,0.3); color: #E8820C; font-size: 5px; padding: 3px 6px; border-radius: 10px;">More on nishkama karma</div>
+        <div style="background: rgba(232,130,12,0.08); border: 1px solid rgba(232,130,12,0.3); color: #E8820C; font-size: 5px; padding: 3px 6px; border-radius: 10px;">Upanishads on action</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Compact Hover</h3>
+      <p>Actions live as <b>small corner pills that appear on hover</b> (like ChatGPT/Claude). Citations are <b>collapsed into "▸ 4 Sources"</b> — click to expand a drawer. Follow-ups become <b>short saffron chips</b>, not full sentences. Most compact; lets the answer breathe.</p>
+      <div style="margin-top: 6px; font-size: 11px; color: #7A5C4F;"><b>Pros:</b> minimal visual weight, answer dominates. <b>Cons:</b> discoverability hit — hover doesn't exist on mobile, so actions need a permanent mobile alternative. Citations being collapsed means users might miss them.</div>
+    </div>
+  </div>
+
+  <!-- OPTION C: SIDECAR -->
+  <div class="card" data-choice="sidecar" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #FDF5E6; padding: 16px 10px;">
+      <div style="background: #FFFDF7; border: 1px solid rgba(212,168,67,0.3); border-radius: 4px 10px 10px 10px; padding: 10px 12px; font-family: Georgia, serif;">
+        <div style="font-size: 8px; line-height: 1.6; color: #2D1810;">
+          Krishna's answer to Arjuna is the famous formulation of karma yoga...
+        </div>
+        <div style="background: linear-gradient(180deg, #FDF5E6, #FFFDF7); border: 1px solid rgba(212,168,67,0.4); border-radius: 3px; padding: 5px 6px; margin: 6px 0; text-align: center;">
+          <div style="color: #6B1D1D; font-size: 4px; font-weight: 700; letter-spacing: 0.15em;">BHAGAVAD GĪTĀ · 2.47</div>
+          <div style="color: #3D0C0C; font-size: 8px; margin-top: 2px;">कर्मण्येवाधिकारस्ते</div>
+        </div>
+        <div style="font-size: 8px; line-height: 1.6; color: #2D1810;">The teaching closes with "In essence" — act, but without craving.</div>
+      </div>
+
+      <!-- Sidecar block: citations + follow-ups in a parchment panel, actions as a toolbar -->
+      <div style="margin-top: 6px; background: linear-gradient(180deg, #FDF5E6, #F7EDD2); border: 1px solid rgba(212,168,67,0.5); border-radius: 10px; padding: 8px 10px;">
+        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
+          <div style="color: #D4A843; font-size: 6px;">✦</div>
+          <div style="color: #6B1D1D; font-size: 5px; font-weight: 700; letter-spacing: 0.15em;">SOURCES CITED</div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 7px;">
+          <div style="background: #FFFDF7; border: 1px solid rgba(232,130,12,0.35); color: #6B1D1D; font-size: 5px; padding: 2px 5px; border-radius: 3px;">BG 2.47</div>
+          <div style="background: #FFFDF7; border: 1px solid rgba(232,130,12,0.35); color: #6B1D1D; font-size: 5px; padding: 2px 5px; border-radius: 3px;">BG 3.35</div>
+          <div style="background: #FFFDF7; border: 1px solid rgba(232,130,12,0.35); color: #6B1D1D; font-size: 5px; padding: 2px 5px; border-radius: 3px;">Katha Up. 1.2.23</div>
+          <div style="background: #FFFDF7; border: 1px solid rgba(232,130,12,0.35); color: #6B1D1D; font-size: 5px; padding: 2px 5px; border-radius: 3px;">MBh 12.259.5</div>
+        </div>
+        <div style="border-top: 1px solid rgba(212,168,67,0.35); padding-top: 6px;">
+          <div style="color: #6B1D1D; font-size: 5px; font-weight: 700; letter-spacing: 0.15em; margin-bottom: 3px;">CONTINUE</div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font-size: 6px; color: #E8820C;">→ How does Shankara interpret this?</div>
+            <div style="font-size: 6px; color: #E8820C;">→ More on nishkama karma</div>
+            <div style="font-size: 6px; color: #E8820C;">→ Upanishads on action</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action toolbar (persistent, under) -->
+      <div style="display: flex; gap: 4px; margin-top: 5px; justify-content: flex-end;">
+        <div style="background: transparent; color: #7A5C4F; font-size: 5px; padding: 2px 5px;">📋 Copy</div>
+        <div style="background: transparent; color: #7A5C4F; font-size: 5px; padding: 2px 5px;">🔁 Regenerate</div>
+        <div style="background: transparent; color: #7A5C4F; font-size: 5px; padding: 2px 5px;">↓ Deeper</div>
+        <div style="background: transparent; color: #7A5C4F; font-size: 5px; padding: 2px 5px;">☀ Simpler</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Parchment Sidecar ★</h3>
+      <p>Answer bubble stays <b>clean</b> (no footer inside). Below it, a <b>distinct parchment panel</b> holds citations and follow-ups together — framed like a companion note. Actions sit <b>as a minimal text-link toolbar</b> underneath. Feels like an answer with a small footnote card attached.</p>
+      <div style="margin-top: 6px; font-size: 11px; color: #7A5C4F;"><b>Pros:</b> the answer is untouched/sacred, metadata has its own room to breathe, works identically on mobile. <b>Cons:</b> more vertical real estate, parchment-on-parchment needs careful contrast tuning.</div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top: 28px; padding: 16px 20px; background: rgba(232,130,12,0.06); border-left: 3px solid #E8820C; border-radius: 4px;">
+  <div class="label">My recommendation</div>
+  <p style="margin-top: 6px;"><b>C · Parchment Sidecar.</b> Two reasons: (1) it keeps the answer bubble <em>clean</em> — the sacred text and prose don't get cluttered by UI chrome, which matters a lot for the Sacred Interface direction. (2) it works the same on desktop and mobile (no hover dependency). Actions as text-links are unobtrusive but fully tappable. Option A is my runner-up if you want actions to feel more "button-y". Option B is the most modern/compact but has real discoverability issues on touch devices.</p>
+</div>

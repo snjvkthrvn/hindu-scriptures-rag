@@ -1,0 +1,98 @@
+<h2>How should the empty/welcome state feel?</h2>
+<p class="subtitle">Three takes on the first screen. All remove the current descriptive paragraph ("I search across 190,000+ verses...") — that's chrome. The question is what replaces it. Shown in dark Temple Ember since that's where the mood lives.</p>
+
+<div class="cards">
+
+  <!-- OPTION A: VERSE OF THE MOMENT -->
+  <div class="card" data-choice="verse" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #1F0808; padding: 28px 18px; position: relative; overflow: hidden; min-height: 260px;">
+      <!-- Ambient glow -->
+      <div style="position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(232,130,12,0.2), transparent 65%);"></div>
+      <div style="position: absolute; bottom: -40px; left: -40px; width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(circle, rgba(212,168,67,0.1), transparent 65%);"></div>
+
+      <div style="position: relative; text-align: center;">
+        <!-- Om -->
+        <div style="font-family: 'Noto Sans Devanagari', serif; font-size: 38px; color: #D4A843; opacity: 0.8; line-height: 1; text-shadow: 0 0 30px rgba(232,130,12,0.4);">ॐ</div>
+
+        <!-- Verse of the day tablet -->
+        <div style="background: linear-gradient(180deg, rgba(107,29,29,0.4) 0%, rgba(30,8,8,0.7) 100%); border: 1px solid rgba(212,168,67,0.4); border-radius: 6px; padding: 12px 14px 10px; margin: 14px auto 0; max-width: 260px; box-shadow: 0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(240,215,140,0.1);">
+          <div style="color: #D4A843; font-family: serif; font-weight: 700; font-size: 6px; letter-spacing: 0.2em; text-transform: uppercase;">TODAY'S VERSE</div>
+          <div style="font-family: 'Noto Sans Devanagari', serif; color: #FFF1D1; font-size: 13px; margin-top: 6px; line-height: 1.5; text-shadow: 0 0 12px rgba(232,130,12,0.3);">कर्मण्येवाधिकारस्ते<br>मा फलेषु कदाचन</div>
+          <div style="display: flex; align-items: center; gap: 6px; margin: 7px 4px 5px;">
+            <div style="flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,168,67,0.55));"></div>
+            <div style="color: #E8820C; font-size: 6px;">✦</div>
+            <div style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(212,168,67,0.55), transparent);"></div>
+          </div>
+          <div style="font-style: italic; color: #F0D78C; font-size: 7px; opacity: 0.9;">karmaṇy evādhikāras te mā phaleṣu kadācana</div>
+          <div style="color: #E8D5B8; font-size: 8px; margin-top: 3px; font-family: Georgia, serif;">You have a right to action alone, never to its fruits.</div>
+          <div style="color: #D4A843; font-family: serif; font-weight: 700; font-size: 5px; letter-spacing: 0.15em; margin-top: 5px;">— BHAGAVAD GĪTĀ · 2.47</div>
+        </div>
+
+        <div style="color: #C9B892; font-size: 9px; font-family: Georgia, serif; font-style: italic; margin-top: 14px; opacity: 0.75;">Ask me anything about this verse, or about any Hindu scripture.</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Verse of the Day</h3>
+      <p><b>A single verse greets you</b>, rotating daily (or randomly from a curated list). The Om sits above. Below, one soft line of invitation. <em>No prompt chips at all</em>. Users type their first question — but if they're stuck, they can ask about the verse shown.</p>
+      <div style="margin-top: 6px; font-size: 11px; color: #7A5C4F;"><b>Feels like:</b> opening a book of daily readings. Most contemplative, gives the user a reason to come back each day.</div>
+    </div>
+  </div>
+
+  <!-- OPTION B: GENTLE PROMPTS -->
+  <div class="card" data-choice="prompts" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #1F0808; padding: 28px 18px; position: relative; overflow: hidden; min-height: 260px;">
+      <div style="position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(232,130,12,0.18), transparent 65%);"></div>
+
+      <div style="position: relative; text-align: center;">
+        <div style="font-family: 'Noto Sans Devanagari', serif; font-size: 52px; color: #D4A843; opacity: 0.7; line-height: 1; text-shadow: 0 0 40px rgba(232,130,12,0.35);">ॐ</div>
+
+        <div style="font-family: serif; color: #F0D78C; font-size: 14px; font-weight: 700; letter-spacing: 0.08em; margin-top: 14px;">Ask the Scriptures</div>
+        <div style="color: #C9B892; font-size: 8px; font-family: Georgia, serif; font-style: italic; margin-top: 4px; opacity: 0.7;">सत्यमेव जयते</div>
+
+        <!-- Gentle prompt lines (not chips) -->
+        <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 5px; max-width: 260px; margin-left: auto; margin-right: auto;">
+          <div style="border-top: 1px solid rgba(212,168,67,0.25); padding: 5px 0 4px; font-size: 8px; color: #F0D78C; font-family: Georgia, serif; font-style: italic;">What does the Gita say about overcoming fear?</div>
+          <div style="border-top: 1px solid rgba(212,168,67,0.25); padding: 5px 0 4px; font-size: 8px; color: #F0D78C; font-family: Georgia, serif; font-style: italic;">Explain Brahman in the Upanishads</div>
+          <div style="border-top: 1px solid rgba(212,168,67,0.25); padding: 5px 0 4px; font-size: 8px; color: #F0D78C; font-family: Georgia, serif; font-style: italic;">Tell me the story of Nachiketa</div>
+          <div style="border-top: 1px solid rgba(212,168,67,0.25); border-bottom: 1px solid rgba(212,168,67,0.25); padding: 5px 0 4px; font-size: 8px; color: #F0D78C; font-family: Georgia, serif; font-style: italic;">What is dharma?</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Gentle Prompts ★</h3>
+      <p>Large Om, title, Sanskrit subtitle. Then prompts rendered as <b>italic serif lines separated by thin rules</b> — not pill buttons. They read like <em>invitations written in the margins of a book</em>, not UI controls. Click any to begin.</p>
+      <div style="margin-top: 6px; font-size: 11px; color: #7A5C4F;"><b>Feels like:</b> a thoughtful contents page. Quiet, still functional for first-time users who need a starting point.</div>
+    </div>
+  </div>
+
+  <!-- OPTION C: PURE OPENING -->
+  <div class="card" data-choice="pure" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #1F0808; padding: 48px 18px 38px; position: relative; overflow: hidden; min-height: 260px;">
+      <div style="position: absolute; top: -80px; left: 50%; transform: translateX(-50%); width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(232,130,12,0.15), transparent 65%);"></div>
+
+      <div style="position: relative; text-align: center;">
+        <div style="font-family: 'Noto Sans Devanagari', serif; font-size: 72px; color: #D4A843; line-height: 1; text-shadow: 0 0 50px rgba(232,130,12,0.5), 0 0 80px rgba(232,130,12,0.3);">ॐ</div>
+
+        <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 20px;">
+          <div style="width: 30px; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,168,67,0.5));"></div>
+          <div style="color: #D4A843; font-size: 8px;">✦</div>
+          <div style="width: 30px; height: 1px; background: linear-gradient(90deg, rgba(212,168,67,0.5), transparent);"></div>
+        </div>
+
+        <div style="font-family: serif; color: #F0D78C; font-size: 10px; font-style: italic; margin-top: 10px; letter-spacing: 0.03em;">Ask the Scriptures anything.</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Pure Opening</h3>
+      <p><b>Just the Om, a gold rule, and one line.</b> No prompts, no description, no tagline. The input bar below carries the weight of what to do next. Maximum reverence and minimum scaffolding.</p>
+      <div style="margin-top: 6px; font-size: 11px; color: #7A5C4F;"><b>Feels like:</b> a temple doorway. <b>Risk:</b> new users without a question in mind will bounce — there's nothing to click.</div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top: 28px; padding: 16px 20px; background: rgba(232,130,12,0.06); border-left: 3px solid #E8820C; border-radius: 4px;">
+  <div class="label">My recommendation</div>
+  <p style="margin-top: 6px;"><b>B · Gentle Prompts</b> — honors the "less chrome, more quiet" principle you chose for the drawer while still giving newcomers a way in. The italic-serif prompt style is a <em>huge</em> aesthetic upgrade over the current saffron pill chips, and it matches the literary voice of the LLM output. Option A (Verse of the Day) is beautiful and I'd include it as an <em>additional</em> feature once the core ships — but as the <em>only</em> welcome content, it makes the product feel like a daily-reading widget rather than a Q&A tool, which isn't what it is. Option C is gorgeous but leaves first-time users at sea.</p>
+  <p style="margin-top: 8px; font-size: 13px;"><em>Hybrid worth considering:</em> Start with B (Gentle Prompts). Once user has used the app a few times, the welcome state could optionally show a "Verse of the Day" above the prompts. I can note this as a v2 feature if you like.</p>
+</div>

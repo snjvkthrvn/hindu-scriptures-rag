@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if register_mode %}Create account{% else %}Sign in{% endif %} — Hindu Scriptures</title>
+    <meta name="theme-color" content="#3D0C0C">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-shell auth-login-shell">
+        <main class="auth-panel">
+            <div class="welcome-om auth-login-om">&#x0950;</div>
+            <h1 class="welcome-title">{% if register_mode %}Create account{% else %}Sign in{% endif %}</h1>
+            {% if error %}
+            <p class="msg-error auth-error">{{ error }}</p>
+            {% endif %}
+            {% if google_oauth_enabled and not register_mode %}
+            <div class="auth-google-block">
+                <a class="auth-google-btn" href="{{ url_for('auth.google_login', next=next_url) }}">Continue with Google</a>
+            </div>
+            <p class="auth-divider"><span>or</span></p>
+            {% endif %}
+            <form class="auth-form" method="post" action="{% if register_mode %}{{ url_for('auth.register') }}{% else %}{{ url_for('auth.login') }}{% endif %}">
+                <input type="hidden" name="next" value="{{ next_url | e }}">
+                <label class="auth-label" for="email">Email</label>
+                <input class="auth-input" id="email" type="email" name="email" required autocomplete="username" value="{{ request.form.get('email', '') }}">
+
+                <label class="auth-label" for="password">Password</label>
+                <input class="auth-input" id="password" type="password" name="password" required autocomplete="{% if register_mode %}new-password{% else %}current-password{% endif %}">
+
+                {% if register_mode %}
+                <label class="auth-label" for="password2">Confirm password</label>
+                <input class="auth-input" id="password2" type="password" name="password2" required autocomplete="new-password">
+                {% endif %}
+
+                <button type="submit" class="auth-submit header-btn" style="width:100%;margin-top:1rem;padding:0.6rem 1rem;">
+                    {% if register_mode %}Register{% else %}Sign in{% endif %}
+                </button>
+            </form>
+            {% if not register_mode and open_registration %}
+            <p class="auth-alt"><a href="{{ url_for('auth.register', next=next_url) }}">Create an account</a></p>
+            {% endif %}
+            {% if register_mode %}
+            <p class="auth-alt"><a href="{{ url_for('auth.login', next=next_url) }}">Already have an account? Sign in</a></p>
+            {% endif %}
+        </main>
+    </div>
+</body>
+</html>

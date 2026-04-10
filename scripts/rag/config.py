@@ -38,6 +38,8 @@ class RAGConfig:
     ollama_base_url: str = "http://localhost:11434"
     openai_model: str = "gpt-4o-mini"
     anthropic_model: str = "claude-sonnet-4-5-20250929"
+    # Smaller model for Sanskrit gloss / auxiliary text (used before main generation).
+    anthropic_haiku_model: str = "claude-haiku-4-5-20251001"
 
     # --- Embedding models ---
     sentence_transformer_model: str = "all-MiniLM-L6-v2"

@@ -7,6 +7,7 @@ Usage:
 
 import json
 import os
+import secrets
 import sys
 import threading
 from dataclasses import replace
@@ -14,9 +15,12 @@ from pathlib import Path
 
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 
+from auth_backend import register_auth
 from config import RAGConfig, PROJECT_ROOT
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+register_auth(app)
 
 
 def _warmup_rag() -> None:

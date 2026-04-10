@@ -78,6 +78,12 @@ htmlcov/
 .env
 .env.local
 
+# Local auth DB (SQLite)
+data/auth.db
+
+# Superpowers / local agent runtime (keep brainstorm HTML, ignore state)
+.superpowers/**/state/
+
 # OS-specific
 Thumbs.db
 Desktop.ini

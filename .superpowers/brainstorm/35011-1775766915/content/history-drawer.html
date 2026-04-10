@@ -1,0 +1,138 @@
+<h2>What's inside the history drawer?</h2>
+<p class="subtitle">The drawer slides in from the left when you tap ☰. Three interior treatments — what should it hold, and how visually distinct should threads feel? Light theme shown; dark variant will follow the Temple Ember palette.</p>
+
+<div class="cards">
+
+  <!-- OPTION A: CLEAN LIST -->
+  <div class="card" data-choice="clean" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #FDF5E6; padding: 10px 8px; position: relative;">
+      <!-- Drawer + dim overlay behind main -->
+      <div style="position: relative; height: 220px;">
+        <!-- Main app dimmed behind -->
+        <div style="position: absolute; inset: 0; background: #FFFDF7; border: 1px solid rgba(212,168,67,0.3); border-radius: 4px; overflow: hidden;">
+          <div style="background: #3D0C0C; color: #F0D78C; padding: 4px 6px; font-size: 5px; opacity: 0.5;">× &nbsp;ॐ&nbsp; HINDU SCRIPTURES</div>
+          <div style="padding: 10px; opacity: 0.25;">
+            <div style="background: rgba(107,29,29,0.5); color: #FDF5E6; padding: 3px 5px; border-radius: 4px; font-size: 5px; width: 55%; margin-left: auto; text-align: right;">What is dharma?</div>
+          </div>
+        </div>
+        <!-- Semitransparent overlay -->
+        <div style="position: absolute; inset: 0; background: rgba(30,10,10,0.35); border-radius: 4px;"></div>
+        <!-- The drawer itself -->
+        <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 130px; background: #FFFDF7; border-right: 2px solid #E8820C; box-shadow: 4px 0 16px rgba(61,12,12,0.25); padding: 8px; font-family: Georgia, serif;">
+          <!-- Header -->
+          <div style="display: flex; align-items: center; gap: 4px; padding-bottom: 6px; border-bottom: 1px solid rgba(212,168,67,0.3);">
+            <div style="font-size: 10px; color: #E8820C;">ॐ</div>
+            <div style="font-weight: 700; font-size: 6px; color: #6B1D1D; letter-spacing: 0.08em;">HISTORY</div>
+            <div style="flex: 1;"></div>
+            <div style="font-size: 6px; color: #7A5C4F;">×</div>
+          </div>
+          <!-- New chat button -->
+          <div style="background: linear-gradient(135deg, #E8820C, #D06A00); color: #fff; text-align: center; padding: 4px; border-radius: 4px; margin-top: 6px; font-size: 5px; font-weight: 700; letter-spacing: 0.08em;">+ NEW CONVERSATION</div>
+          <!-- Thread list (flat, grouped) -->
+          <div style="font-size: 4px; color: #7A5C4F; letter-spacing: 0.15em; margin-top: 8px;">TODAY</div>
+          <div style="background: rgba(232,130,12,0.08); border-left: 2px solid #E8820C; padding: 3px 4px; margin-top: 3px; font-size: 5px; color: #2D1810;">On dharma and action</div>
+          <div style="padding: 3px 4px; margin-top: 2px; font-size: 5px; color: #2D1810;">What is karma?</div>
+          <div style="font-size: 4px; color: #7A5C4F; letter-spacing: 0.15em; margin-top: 6px;">YESTERDAY</div>
+          <div style="padding: 3px 4px; margin-top: 3px; font-size: 5px; color: #2D1810;">Nachiketa's story</div>
+          <div style="padding: 3px 4px; margin-top: 2px; font-size: 5px; color: #2D1810;">Brahman in Upanishads</div>
+          <div style="font-size: 4px; color: #7A5C4F; letter-spacing: 0.15em; margin-top: 6px;">LAST WEEK</div>
+          <div style="padding: 3px 4px; margin-top: 3px; font-size: 5px; color: #2D1810;">Rigveda on creation</div>
+          <div style="padding: 3px 4px; margin-top: 2px; font-size: 5px; color: #2D1810;">Gita 2.47 deep dive</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Clean List</h3>
+      <p>Simple, ChatGPT-like. Header with Om + title + close. Prominent "+ New Conversation" button. Threads as single-line titles grouped by <b>Today / Yesterday / Last Week / Older</b>. Current thread highlighted with a saffron left border. <em>No search, no previews — just threads</em>.</p>
+      <div style="margin-top: 6px; font-size: 11px; color: #7A5C4F;"><b>Best for:</b> users who have few threads and know them by title.</div>
+    </div>
+  </div>
+
+  <!-- OPTION B: RICH CARDS -->
+  <div class="card" data-choice="rich" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #FDF5E6; padding: 10px 8px; position: relative;">
+      <div style="position: relative; height: 220px;">
+        <div style="position: absolute; inset: 0; background: #FFFDF7; border: 1px solid rgba(212,168,67,0.3); border-radius: 4px; overflow: hidden;">
+          <div style="background: #3D0C0C; color: #F0D78C; padding: 4px 6px; font-size: 5px; opacity: 0.5;">× &nbsp;ॐ&nbsp; HINDU SCRIPTURES</div>
+        </div>
+        <div style="position: absolute; inset: 0; background: rgba(30,10,10,0.35); border-radius: 4px;"></div>
+        <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 150px; background: #FFFDF7; border-right: 2px solid #E8820C; box-shadow: 4px 0 16px rgba(61,12,12,0.25); padding: 8px; font-family: Georgia, serif;">
+          <div style="display: flex; align-items: center; gap: 4px; padding-bottom: 6px; border-bottom: 1px solid rgba(212,168,67,0.3);">
+            <div style="font-size: 10px; color: #E8820C;">ॐ</div>
+            <div style="font-weight: 700; font-size: 6px; color: #6B1D1D; letter-spacing: 0.08em;">HISTORY</div>
+            <div style="flex: 1;"></div>
+            <div style="font-size: 6px; color: #7A5C4F;">×</div>
+          </div>
+          <!-- Search -->
+          <div style="background: #FDF5E6; border: 1px solid rgba(212,168,67,0.4); border-radius: 3px; padding: 3px 5px; margin-top: 5px; font-size: 4px; color: #A08878;">🔍 Search threads...</div>
+          <div style="background: linear-gradient(135deg, #E8820C, #D06A00); color: #fff; text-align: center; padding: 4px; border-radius: 4px; margin-top: 4px; font-size: 5px; font-weight: 700; letter-spacing: 0.08em;">+ NEW CONVERSATION</div>
+          <!-- Rich thread cards -->
+          <div style="font-size: 4px; color: #7A5C4F; letter-spacing: 0.15em; margin-top: 6px;">TODAY</div>
+          <div style="background: rgba(232,130,12,0.06); border: 1px solid rgba(232,130,12,0.3); border-left: 2px solid #E8820C; border-radius: 3px; padding: 4px 5px; margin-top: 3px;">
+            <div style="font-size: 5px; font-weight: 700; color: #2D1810;">On dharma and action</div>
+            <div style="font-size: 4px; color: #7A5C4F; line-height: 1.3; margin-top: 1px;">Krishna tells Arjuna that dharma...</div>
+            <div style="display: flex; gap: 2px; margin-top: 2px;">
+              <div style="background: rgba(232,130,12,0.15); color: #E8820C; font-size: 3px; padding: 1px 3px; border-radius: 4px;">BG</div>
+              <div style="background: rgba(232,130,12,0.15); color: #E8820C; font-size: 3px; padding: 1px 3px; border-radius: 4px;">Upan.</div>
+              <div style="flex: 1;"></div>
+              <div style="font-size: 3px; color: #A08878;">5 msg</div>
+            </div>
+          </div>
+          <div style="border: 1px solid rgba(212,168,67,0.25); border-radius: 3px; padding: 4px 5px; margin-top: 3px;">
+            <div style="font-size: 5px; color: #2D1810;">What is karma?</div>
+            <div style="font-size: 4px; color: #7A5C4F; line-height: 1.3; margin-top: 1px;">Karma in the Vedas begins as...</div>
+            <div style="display: flex; gap: 2px; margin-top: 2px;">
+              <div style="background: rgba(232,130,12,0.12); color: #E8820C; font-size: 3px; padding: 1px 3px; border-radius: 4px;">Veda</div>
+              <div style="flex: 1;"></div>
+              <div style="font-size: 3px; color: #A08878;">2 msg</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Rich Cards ★</h3>
+      <p>Header + <b>search box</b> + New button. Each thread is a <b>card with a preview line</b> (first few words of the last answer), <b>scripture tags</b> pulled from citations, and a message count. Grouped by time. Active thread gets a saffron border all around.</p>
+      <div style="margin-top: 6px; font-size: 11px; color: #7A5C4F;"><b>Best for:</b> users with many threads who need to scan and remember by content, not just title. The scripture tags tie beautifully into the Reading Companion direction.</div>
+    </div>
+  </div>
+
+  <!-- OPTION C: MINIMAL + INFINITE -->
+  <div class="card" data-choice="minimal" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #FDF5E6; padding: 10px 8px; position: relative;">
+      <div style="position: relative; height: 220px;">
+        <div style="position: absolute; inset: 0; background: #FFFDF7; border: 1px solid rgba(212,168,67,0.3); border-radius: 4px; overflow: hidden;">
+          <div style="background: #3D0C0C; color: #F0D78C; padding: 4px 6px; font-size: 5px; opacity: 0.5;">× &nbsp;ॐ&nbsp; HINDU SCRIPTURES</div>
+        </div>
+        <div style="position: absolute; inset: 0; background: rgba(30,10,10,0.35); border-radius: 4px;"></div>
+        <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 110px; background: #FFFDF7; border-right: 1px solid rgba(212,168,67,0.5); box-shadow: 4px 0 16px rgba(61,12,12,0.2); padding: 10px 8px; font-family: Georgia, serif;">
+          <div style="text-align: center; font-size: 12px; color: #E8820C; opacity: 0.5;">ॐ</div>
+          <div style="text-align: center; font-size: 5px; color: #6B1D1D; font-weight: 700; letter-spacing: 0.15em; margin-top: 2px;">THREADS</div>
+          <div style="background: transparent; border: 1px dashed rgba(232,130,12,0.5); color: #E8820C; text-align: center; padding: 3px; border-radius: 3px; margin-top: 8px; font-size: 5px; letter-spacing: 0.08em;">+ NEW</div>
+          <!-- Just titles, no headers -->
+          <div style="margin-top: 10px;">
+            <div style="background: rgba(232,130,12,0.08); padding: 3px 4px; margin-top: 2px; font-size: 5px; color: #2D1810; border-radius: 2px;">On dharma and action</div>
+            <div style="padding: 3px 4px; margin-top: 1px; font-size: 5px; color: #2D1810;">What is karma?</div>
+            <div style="padding: 3px 4px; margin-top: 1px; font-size: 5px; color: #2D1810;">Nachiketa's story</div>
+            <div style="padding: 3px 4px; margin-top: 1px; font-size: 5px; color: #2D1810;">Brahman</div>
+            <div style="padding: 3px 4px; margin-top: 1px; font-size: 5px; color: #2D1810;">Rigveda creation</div>
+            <div style="padding: 3px 4px; margin-top: 1px; font-size: 5px; color: #2D1810;">Gita 2.47 deep</div>
+            <div style="padding: 3px 4px; margin-top: 1px; font-size: 5px; color: #2D1810;">Bhakti traditions</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Minimalist Ribbon</h3>
+      <p>Narrower drawer. <b>No search, no previews, no date groupings</b>. Just "+New" and a flat chronological list of thread titles. Smallest footprint, least visual noise.</p>
+      <div style="margin-top: 6px; font-size: 11px; color: #7A5C4F;"><b>Best for:</b> users who treat each session as ephemeral and mostly use "+New" — history is a safety net, not a workspace.</div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top: 28px; padding: 16px 20px; background: rgba(232,130,12,0.06); border-left: 3px solid #E8820C; border-radius: 4px;">
+  <div class="label">My recommendation</div>
+  <p style="margin-top: 6px;"><b>B · Rich Cards.</b> Reason: for a <em>Reading Companion</em> product, users will build up a real library of threads over weeks. Previews + scripture tags transform the history drawer from a "switch list" into a <em>personal reading archive</em> — which is exactly the Companion direction's promise. Search is essential once you have more than ~15 threads. Option A is cleaner but has less memory-jogging power; Option C is too austere for daily return.</p>
+  <p style="margin-top: 8px; font-size: 13px;"><em>Note:</em> this does require a small change to the data model — we'd need to store a preview snippet and scripture tags per thread in localStorage. Very small lift.</p>
+</div>

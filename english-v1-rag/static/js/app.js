@@ -16,6 +16,10 @@
   const drawerClose = document.getElementById("drawerClose");
   const voiceList = document.getElementById("voiceList");
   const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+  const authUserLabel = document.getElementById("authUserLabel");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const loginBtn = document.getElementById("loginBtn");
+  const guestHint = document.getElementById("guestHint");
 
   let conversationHistory = [];
   let isStreaming = false;
@@ -46,6 +50,71 @@
       applyTheme(prefersDark ? "dark" : "light");
     }
   })();
+
+  function updateLoginHref() {
+    if (loginBtn) {
+      loginBtn.href =
+        "/auth/login?next=" +
+        encodeURIComponent(window.location.pathname + window.location.search);
+    }
+  }
+
+  function refreshAuthBar() {
+    fetch("/api/auth/me", { credentials: "same-origin" })
+      .then(function (r) {
+        return r.json();
+      })
+      .then(function (data) {
+        updateLoginHref();
+        if (data.logged_in && data.email) {
+          if (authUserLabel) {
+            authUserLabel.textContent = data.email;
+            authUserLabel.hidden = false;
+          }
+          if (logoutBtn) logoutBtn.hidden = false;
+          if (loginBtn) loginBtn.hidden = true;
+          if (guestHint) guestHint.hidden = true;
+        } else {
+          if (authUserLabel) {
+            authUserLabel.textContent = "";
+            authUserLabel.hidden = true;
+          }
+          if (logoutBtn) logoutBtn.hidden = true;
+          if (loginBtn) loginBtn.hidden = false;
+          if (guestHint) {
+            if (
+              typeof data.guest_messages_remaining === "number" &&
+              data.guest_limit > 0
+            ) {
+              var rem = data.guest_messages_remaining;
+              guestHint.textContent =
+                rem === 0
+                  ? "Sign in to continue"
+                  : rem + " free message" + (rem === 1 ? "" : "s") + " left";
+              guestHint.hidden = false;
+            } else {
+              guestHint.hidden = true;
+            }
+          }
+        }
+      })
+      .catch(function () {});
+  }
+  updateLoginHref();
+  refreshAuthBar();
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", function () {
+      fetch("/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      }).then(function () {
+        window.location.href = "/";
+      });
+    });
+  }
 
   themeToggle.addEventListener("click", function () {
     const current =
@@ -80,7 +149,7 @@
      Voice picker
      ==================================================================== */
   function loadVoices() {
-    fetch("/api/voices")
+    fetch("/api/voices", { credentials: "same-origin" })
       .then(function (r) {
         return r.json();
       })
@@ -160,7 +229,7 @@
   /* ====================================================================
      Corpus badge
      ==================================================================== */
-  fetch("/api/sources")
+  fetch("/api/sources", { credentials: "same-origin" })
     .then(function (r) {
       return r.json();
     })
@@ -282,8 +351,17 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question: question }),
       signal: abortController.signal,
+      credentials: "same-origin",
     })
       .then(function (r) {
+        if (r.status === 401) {
+          window.location.href =
+            "/auth/login?next=" +
+            encodeURIComponent(
+              window.location.pathname + window.location.search,
+            );
+          return Promise.reject({ name: "Auth" });
+        }
         return r.ok
           ? r.json()
           : r.json().then(function (d) {
@@ -314,6 +392,18 @@
       .catch(function (err) {
         clearTimeout(timeoutId);
         thinkingEl.remove();
+        if (err && err.name === "GuestLimit") {
+          var nextQ = encodeURIComponent(
+            window.location.pathname + window.location.search,
+          );
+          contentEl.innerHTML =
+            '<div class="msg-error">You have used your free messages. <a href="/auth/login?next=' +
+            nextQ +
+            '">Sign in</a> to continue.</div>';
+          finishStreaming();
+          refreshAuthBar();
+          return;
+        }
         if (err.name === "AbortError") {
           contentEl.innerHTML =
             '<div class="msg-error">Request timed out or cancelled. Try again.</div>';
@@ -354,8 +444,17 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       signal: abortController.signal,
+      credentials: "same-origin",
     })
       .then(function (response) {
+        if (response.status === 401) {
+          return response.json().then(function (d) {
+            if (d.error === "guest_limit_exceeded") {
+              return Promise.reject({ name: "GuestLimit", body: d });
+            }
+            return Promise.reject({ name: "Auth401", body: d });
+          });
+        }
         if (!response.ok)
           return response.json().then(function (d) {
             return Promise.reject(d);
@@ -452,6 +551,18 @@
       })
       .catch(function (err) {
         clearTimeout(timeoutId);
+        if (err && err.name === "GuestLimit") {
+          var nextS = encodeURIComponent(
+            window.location.pathname + window.location.search,
+          );
+          contentEl.innerHTML =
+            '<div class="msg-error">You have used your free messages. <a href="/auth/login?next=' +
+            nextS +
+            '">Sign in</a> to continue.</div>';
+          finishStreaming();
+          refreshAuthBar();
+          return;
+        }
         if (err.name === "AbortError") {
           contentEl.innerHTML =
             contentEl.innerHTML ||
@@ -492,6 +603,7 @@
     sendBtn.classList.remove("cancel-mode");
     sendBtn.onclick = sendMessage;
     chatInput.focus();
+    refreshAuthBar();
   }
 
   /* ====================================================================
