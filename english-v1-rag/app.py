@@ -14,13 +14,15 @@ import secrets
 import threading
 from dataclasses import replace
 
+# Import english_config before auth_backend/config/voices: it inserts scripts/rag on
+# sys.path so those modules resolve when the cwd is english-v1-rag (Docker/Gunicorn).
+from english_config import ENGLISH_VERSES_FILE, get_english_config
+
 from auth_backend import register_auth
 from config import PROJECT_ROOT, RAGConfig
 from flask import Blueprint, Flask, Response, jsonify, render_template, request, stream_with_context
 from voices import VOICES
 from werkzeug.middleware.proxy_fix import ProxyFix
-
-from english_config import ENGLISH_VERSES_FILE, get_english_config
 
 app = Flask(__name__)
 # Railway / reverse proxies send X-Forwarded-Proto; without this, url_for(..., _external=True)

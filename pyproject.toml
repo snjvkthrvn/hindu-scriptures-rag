@@ -39,6 +39,7 @@ ignore = [
 
 # Imports after sys.path hacks are intentional.
 [tool.ruff.lint.per-file-ignores]
+"english-v1-rag/app.py" = ["I001"]  # english_config must import before auth_backend (sys.path)
 "english-v1-rag/agent/react_loop.py" = ["E402"]
 "english-v1-rag/agent/tools.py" = ["E402"]
 "english-v1-rag/index_english.py" = ["E402"]
