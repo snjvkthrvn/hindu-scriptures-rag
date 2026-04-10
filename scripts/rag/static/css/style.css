@@ -1391,6 +1391,11 @@ body::before {
     justify-content: center;
 }
 
+/* HTML hidden must win: .header-right a.header-btn sets display and can override [hidden] */
+.header-auth [hidden] {
+    display: none !important;
+}
+
 .auth-google-block {
     margin-top: 0.5rem;
 }
