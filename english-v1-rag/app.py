@@ -19,6 +19,7 @@ from flask import Blueprint, Flask, Response, jsonify, render_template, request,
 
 from english_config import get_english_config, ENGLISH_VERSES_FILE
 from config import RAGConfig, PROJECT_ROOT
+from voices import VOICES
 
 app = Flask(__name__)
 
@@ -128,6 +129,7 @@ def _make_rag_routes(bp_or_app, base_config, filter_options):
         data = request.get_json(silent=True) or {}
         question = (data.get("question") or "").strip()
         history = data.get("history") or []
+        voice = (data.get("voice") or "").strip() or None
         if not question:
             return jsonify({"error": "No question provided"}), 400
 
@@ -135,7 +137,9 @@ def _make_rag_routes(bp_or_app, base_config, filter_options):
 
         def event_stream():
             try:
-                for event in run_agent_stream(question, config=config, history=history):
+                for event in run_agent_stream(
+                    question, config=config, history=history, voice=voice,
+                ):
                     yield f"data: {json.dumps(event)}\n\n"
             except Exception as e:
                 yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
@@ -145,6 +149,13 @@ def _make_rag_routes(bp_or_app, base_config, filter_options):
             mimetype="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
+
+    @bp_or_app.route("/api/voices")
+    def api_voices():
+        return jsonify({
+            key: {"name": v["name"], "is_default": v.get("is_default", False)}
+            for key, v in VOICES.items()
+        })
 
 
 # ---------------------------------------------------------------------------

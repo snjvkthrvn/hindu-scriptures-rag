@@ -1,0 +1,16 @@
+{
+  "name": "Hindu Scriptures — Ask the Texts",
+  "short_name": "Scriptures",
+  "description": "AI-powered search across 14,000+ verses from the Vedas, Upanishads, Gita, Mahabharata, Ramayana & Yoga Sutras.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFDF7",
+  "theme_color": "#3D0C0C",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E0%A5%90</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -20,6 +20,9 @@ from prompt_templates import AGENT_SYSTEM_PROMPT
 import llm as llm_module
 from agent.tools import TOOL_DEFINITIONS, execute_tool
 from agent.conversation import ConversationMemory
+from voices import get_voice_prompt
+from agent.citations import extract_refs
+from agent.followups import generate_followups
 
 
 def run_agent(
@@ -132,6 +135,7 @@ def run_agent_stream(
     question: str,
     config: RAGConfig | None = None,
     history: list | None = None,
+    voice: str | None = None,
 ):
     """Streaming version — yields SSE events for the frontend.
 
@@ -140,10 +144,16 @@ def run_agent_stream(
         {"type": "tool_call", "name": "...", "input": {...}}
         {"type": "tool_result", "name": "...", "summary": "..."}
         {"type": "answer_chunk", "content": "..."}
+        {"type": "citations", "refs": [...]}
+        {"type": "followups", "questions": [...]}
         {"type": "done", "tool_calls": [...]}
     """
     if config is None:
         config = get_english_config()
+
+    system_prompt = AGENT_SYSTEM_PROMPT.format(
+        voice_block=get_voice_prompt(voice),
+    )
 
     memory = ConversationMemory(window=config.conversation_window)
     if history:
@@ -158,7 +168,7 @@ def run_agent_stream(
 
     for turn in range(max_turns):
         response = llm_module.generate_with_tools(
-            system=AGENT_SYSTEM_PROMPT,
+            system=system_prompt,
             messages=messages,
             tools=TOOL_DEFINITIONS,
             config=config,
@@ -173,6 +183,19 @@ def run_agent_stream(
 
             memory.add("user", question)
             memory.add("assistant", answer)
+
+            refs = extract_refs(answer)
+            if refs:
+                yield {"type": "citations", "refs": refs}
+
+            try:
+                from anthropic import Anthropic
+                client = Anthropic()
+                followups = generate_followups(client, question, answer)
+                if followups:
+                    yield {"type": "followups", "questions": followups}
+            except Exception:
+                pass
 
             yield {"type": "done", "tool_calls": tool_calls_log}
             return

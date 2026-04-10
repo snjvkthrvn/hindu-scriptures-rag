@@ -1,58 +1,207 @@
 (function () {
   "use strict";
 
-  // --- DOM refs ---
+  /* ====================================================================
+     DOM refs
+     ==================================================================== */
   const chatMessages = document.getElementById("chatMessages");
   const chatInput = document.getElementById("chatInput");
   const sendBtn = document.getElementById("sendBtn");
   const welcome = document.getElementById("welcome");
   const corpusBadge = document.getElementById("corpusBadge");
   const newChatBtn = document.getElementById("newChatBtn");
+  const themeToggle = document.getElementById("themeToggle");
+  const settingsBtn = document.getElementById("settingsBtn");
+  const drawerOverlay = document.getElementById("drawerOverlay");
+  const drawerClose = document.getElementById("drawerClose");
+  const voiceList = document.getElementById("voiceList");
+  const clearHistoryBtn = document.getElementById("clearHistoryBtn");
 
   let conversationHistory = [];
   let isStreaming = false;
   let abortController = null;
+  let currentVoice = localStorage.getItem("hs-voice") || "elder";
 
-  // --- Load corpus info ---
+  /* ====================================================================
+     Theme
+     ==================================================================== */
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("hs-theme", theme);
+    themeToggle.textContent = theme === "dark" ? "\u2600" : "\u263E";
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+      metaTheme.content = theme === "dark" ? "#0F0C0A" : "#3D0C0C";
+    }
+  }
+
+  (function initTheme() {
+    const saved = localStorage.getItem("hs-theme");
+    if (saved) {
+      applyTheme(saved);
+    } else {
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+      applyTheme(prefersDark ? "dark" : "light");
+    }
+  })();
+
+  themeToggle.addEventListener("click", function () {
+    const current =
+      document.documentElement.getAttribute("data-theme") || "light";
+    applyTheme(current === "dark" ? "light" : "dark");
+  });
+
+  /* ====================================================================
+     Drawer
+     ==================================================================== */
+  function openDrawer() {
+    drawerOverlay.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+  function closeDrawer() {
+    drawerOverlay.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  settingsBtn.addEventListener("click", openDrawer);
+  drawerClose.addEventListener("click", closeDrawer);
+  drawerOverlay.addEventListener("click", function (e) {
+    if (e.target === drawerOverlay) closeDrawer();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && drawerOverlay.classList.contains("open")) {
+      closeDrawer();
+    }
+  });
+
+  /* ====================================================================
+     Voice picker
+     ==================================================================== */
+  function loadVoices() {
+    fetch("/api/voices")
+      .then(function (r) {
+        return r.json();
+      })
+      .then(function (voices) {
+        voiceList.innerHTML = "";
+        Object.keys(voices).forEach(function (key) {
+          var v = voices[key];
+          var btn = document.createElement("button");
+          btn.className =
+            "voice-option" + (key === currentVoice ? " active" : "");
+          btn.innerHTML =
+            '<span class="voice-name">' + escHtml(v.name) + "</span>";
+          btn.addEventListener("click", function () {
+            currentVoice = key;
+            localStorage.setItem("hs-voice", key);
+            voiceList.querySelectorAll(".voice-option").forEach(function (b) {
+              b.classList.remove("active");
+            });
+            btn.classList.add("active");
+          });
+          voiceList.appendChild(btn);
+        });
+      })
+      .catch(function () {});
+  }
+  loadVoices();
+
+  /* ====================================================================
+     Conversation persistence (localStorage)
+     ==================================================================== */
+  var STORAGE_KEY = "hs-conversations";
+  var MAX_STORED = 50;
+
+  function loadConversation() {
+    try {
+      var data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      if (Array.isArray(data) && data.length > 0) {
+        conversationHistory = data;
+        welcome.hidden = true;
+        conversationHistory.forEach(function (msg) {
+          if (msg.role === "user") {
+            addMessage("user", msg.content);
+          } else if (msg.role === "assistant") {
+            var el = addMessage("assistant", "");
+            var contentEl = el.querySelector(".msg-content");
+            contentEl.innerHTML = renderMarkdown(msg.content);
+            addCopyButton(contentEl);
+          }
+        });
+        scrollToBottom();
+      }
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function saveConversation() {
+    try {
+      var trimmed = conversationHistory.slice(-MAX_STORED);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  loadConversation();
+
+  clearHistoryBtn.addEventListener("click", function () {
+    localStorage.removeItem(STORAGE_KEY);
+    conversationHistory = [];
+    chatMessages.innerHTML = "";
+    chatMessages.appendChild(welcome);
+    welcome.hidden = false;
+    closeDrawer();
+  });
+
+  /* ====================================================================
+     Corpus badge
+     ==================================================================== */
   fetch("/api/sources")
-    .then((r) => r.json())
-    .then((data) => {
+    .then(function (r) {
+      return r.json();
+    })
+    .then(function (data) {
       if (data.total_verses) {
         corpusBadge.textContent =
           data.total_verses.toLocaleString() +
-          " verses · " +
+          " verses \u00B7 " +
           data.sources.length +
           " texts";
       }
     })
-    .catch(() => {});
+    .catch(function () {});
 
-  // --- Auto-resize textarea ---
-  chatInput.addEventListener("input", () => {
+  /* ====================================================================
+     Input
+     ==================================================================== */
+  chatInput.addEventListener("input", function () {
     chatInput.style.height = "auto";
     chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + "px";
   });
 
-  // --- Send on Enter (shift+enter for newline) ---
-  chatInput.addEventListener("keydown", (e) => {
+  chatInput.addEventListener("keydown", function (e) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   });
+
   sendBtn.addEventListener("click", sendMessage);
 
-  // --- Prompt chips ---
-  document.querySelectorAll(".prompt-chip").forEach((btn) => {
-    btn.addEventListener("click", () => {
+  document.querySelectorAll(".prompt-chip").forEach(function (btn) {
+    btn.addEventListener("click", function () {
       chatInput.value = btn.dataset.q;
       sendMessage();
     });
   });
 
-  // --- New chat ---
-  newChatBtn.addEventListener("click", () => {
+  newChatBtn.addEventListener("click", function () {
     conversationHistory = [];
+    saveConversation();
     chatMessages.innerHTML = "";
     chatMessages.appendChild(welcome);
     welcome.hidden = false;
@@ -60,33 +209,29 @@
     chatInput.style.height = "auto";
   });
 
-  // --- Send message ---
+  /* ====================================================================
+     Send message
+     ==================================================================== */
   function sendMessage() {
-    const text = chatInput.value.trim();
+    var text = chatInput.value.trim();
     if (!text || isStreaming) return;
 
-    // Hide welcome
     welcome.hidden = true;
-
-    // Add user bubble
     addMessage("user", text);
     chatInput.value = "";
     chatInput.style.height = "auto";
 
-    // Add assistant bubble (placeholder)
-    const assistantEl = addMessage("assistant", "");
-    const contentEl = assistantEl.querySelector(".msg-content");
-    const thinkingEl = document.createElement("div");
+    var assistantEl = addMessage("assistant", "");
+    var contentEl = assistantEl.querySelector(".msg-content");
+    var thinkingEl = document.createElement("div");
     thinkingEl.className = "thinking-steps";
     contentEl.parentNode.insertBefore(thinkingEl, contentEl);
 
-    // Show typing indicator
     contentEl.innerHTML =
       '<span class="typing-indicator"><span></span><span></span><span></span></span>';
-
     scrollToBottom();
-    // Short questions (1-4 words): use simple query — faster, fewer API calls, more reliable
-    const wordCount = text.split(/\s+/).filter(Boolean).length;
+
+    var wordCount = text.split(/\s+/).filter(Boolean).length;
     if (wordCount <= 4) {
       doSimpleQuery(text, contentEl, thinkingEl);
     } else {
@@ -94,12 +239,13 @@
     }
   }
 
-  // --- Add message bubble ---
+  /* ====================================================================
+     Add message bubble
+     ==================================================================== */
   function addMessage(role, text) {
-    const wrapper = document.createElement("div");
+    var wrapper = document.createElement("div");
     wrapper.className = "msg msg-" + role;
-
-    const bubble = document.createElement("div");
+    var bubble = document.createElement("div");
     bubble.className = "msg-bubble";
 
     if (role === "user") {
@@ -116,23 +262,20 @@
     return wrapper;
   }
 
-  // --- Simple query (no agent) — faster, fewer failure points ---
-  const REQUEST_TIMEOUT_MS = 75000; // 75 sec — abort if stalled
+  /* ====================================================================
+     Simple query (no agent)
+     ==================================================================== */
+  var REQUEST_TIMEOUT_MS = 75000;
 
   function doSimpleQuery(question, contentEl, thinkingEl) {
     isStreaming = true;
     sendBtn.disabled = true;
     abortController = new AbortController();
-    const timeoutId = setTimeout(
-      () => abortController.abort(),
-      REQUEST_TIMEOUT_MS,
-    );
+    var timeoutId = setTimeout(function () {
+      abortController.abort();
+    }, REQUEST_TIMEOUT_MS);
 
-    sendBtn.innerHTML =
-      '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>';
-    sendBtn.disabled = false;
-    sendBtn.classList.add("cancel-mode");
-    sendBtn.onclick = cancelStream;
+    showStopBtn();
 
     fetch("/api/query", {
       method: "POST",
@@ -140,11 +283,17 @@
       body: JSON.stringify({ question: question }),
       signal: abortController.signal,
     })
-      .then((r) => (r.ok ? r.json() : r.json().then((d) => Promise.reject(d))))
-      .then((data) => {
+      .then(function (r) {
+        return r.ok
+          ? r.json()
+          : r.json().then(function (d) {
+              return Promise.reject(d);
+            });
+      })
+      .then(function (data) {
         clearTimeout(timeoutId);
         thinkingEl.remove();
-        contentEl.innerHTML = renderMarkdown(data.answer || ""); // eslint-disable-line -- sanitized via renderMarkdown
+        contentEl.innerHTML = renderMarkdown(data.answer || "");
         addCopyButton(contentEl);
         if (data.sources && data.sources.length) {
           addSourceCards(
@@ -155,12 +304,14 @@
         if (data.answer) {
           conversationHistory.push({ role: "user", content: question });
           conversationHistory.push({ role: "assistant", content: data.answer });
-          if (conversationHistory.length > 20)
-            conversationHistory = conversationHistory.slice(-20);
+          if (conversationHistory.length > MAX_STORED) {
+            conversationHistory = conversationHistory.slice(-MAX_STORED);
+          }
+          saveConversation();
         }
         finishStreaming();
       })
-      .catch((err) => {
+      .catch(function (err) {
         clearTimeout(timeoutId);
         thinkingEl.remove();
         if (err.name === "AbortError") {
@@ -176,28 +327,27 @@
       });
   }
 
-  // --- Streaming agent call ---
+  /* ====================================================================
+     Streaming agent call
+     ==================================================================== */
   function doAgentStream(question, contentEl, thinkingEl) {
     isStreaming = true;
     sendBtn.disabled = true;
     abortController = new AbortController();
-    const timeoutId = setTimeout(
-      () => abortController.abort(),
-      REQUEST_TIMEOUT_MS,
-    );
+    var timeoutId = setTimeout(function () {
+      abortController.abort();
+    }, REQUEST_TIMEOUT_MS);
 
-    sendBtn.innerHTML =
-      '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>';
-    sendBtn.disabled = false;
-    sendBtn.classList.add("cancel-mode");
-    sendBtn.onclick = cancelStream;
+    showStopBtn();
 
-    const payload = {
+    var payload = {
       question: question,
       history: conversationHistory,
+      voice: currentVoice,
     };
 
-    let answerText = "";
+    var answerText = "";
+    var msgBody = contentEl.closest(".msg-body") || contentEl.parentNode;
 
     fetch("/api/agent/stream", {
       method: "POST",
@@ -205,16 +355,19 @@
       body: JSON.stringify(payload),
       signal: abortController.signal,
     })
-      .then((response) => {
-        if (!response.ok) return response.json().then((d) => Promise.reject(d));
+      .then(function (response) {
+        if (!response.ok)
+          return response.json().then(function (d) {
+            return Promise.reject(d);
+          });
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+        var reader = response.body.getReader();
+        var decoder = new TextDecoder();
+        var buffer = "";
 
         function processChunk() {
-          return reader.read().then(({ done, value }) => {
-            if (done) {
+          return reader.read().then(function (result) {
+            if (result.done) {
               clearTimeout(timeoutId);
               if (answerText) {
                 conversationHistory.push({ role: "user", content: question });
@@ -222,21 +375,23 @@
                   role: "assistant",
                   content: answerText,
                 });
-                if (conversationHistory.length > 20) {
-                  conversationHistory = conversationHistory.slice(-20);
+                if (conversationHistory.length > MAX_STORED) {
+                  conversationHistory = conversationHistory.slice(-MAX_STORED);
                 }
+                saveConversation();
               }
               finishStreaming();
               return;
             }
 
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
+            buffer += decoder.decode(result.value, { stream: true });
+            var lines = buffer.split("\n");
             buffer = lines.pop();
 
-            for (const line of lines) {
+            for (var i = 0; i < lines.length; i++) {
+              var line = lines[i];
               if (!line.startsWith("data: ")) continue;
-              let event;
+              var event;
               try {
                 event = JSON.parse(line.slice(6));
               } catch (e) {
@@ -247,7 +402,6 @@
                 case "thinking":
                   addThinkingStep(thinkingEl, "thought", event.content);
                   break;
-
                 case "tool_call":
                   addThinkingStep(
                     thinkingEl,
@@ -255,7 +409,6 @@
                     formatToolCall(event.name, event.input),
                   );
                   break;
-
                 case "tool_result":
                   addThinkingStep(
                     thinkingEl,
@@ -263,20 +416,25 @@
                     event.summary || "Done",
                   );
                   break;
-
                 case "answer_chunk":
                   answerText += event.content;
                   contentEl.innerHTML = renderMarkdown(answerText);
                   scrollToBottom();
                   break;
-
-                case "done":
-                  if (thinkingEl.children.length === 0) {
-                    thinkingEl.remove();
+                case "citations":
+                  if (event.refs && event.refs.length) {
+                    addCitationBar(msgBody, event.refs);
                   }
+                  break;
+                case "followups":
+                  if (event.questions && event.questions.length) {
+                    addFollowupChips(msgBody, event.questions);
+                  }
+                  break;
+                case "done":
+                  if (thinkingEl.children.length === 0) thinkingEl.remove();
                   addCopyButton(contentEl);
                   break;
-
                 case "error":
                   contentEl.innerHTML =
                     '<div class="msg-error">' +
@@ -292,7 +450,7 @@
 
         return processChunk();
       })
-      .catch((err) => {
+      .catch(function (err) {
         clearTimeout(timeoutId);
         if (err.name === "AbortError") {
           contentEl.innerHTML =
@@ -315,26 +473,35 @@
     }
   }
 
-  const SEND_ICON =
+  var SEND_ICON =
     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+
+  function showStopBtn() {
+    sendBtn.innerHTML =
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>';
+    sendBtn.disabled = false;
+    sendBtn.classList.add("cancel-mode");
+    sendBtn.onclick = cancelStream;
+  }
 
   function finishStreaming() {
     isStreaming = false;
     abortController = null;
-    sendBtn.innerHTML = SEND_ICON; // eslint-disable-line
+    sendBtn.innerHTML = SEND_ICON;
     sendBtn.disabled = false;
     sendBtn.classList.remove("cancel-mode");
     sendBtn.onclick = sendMessage;
     chatInput.focus();
   }
 
-  // --- Thinking steps inside assistant bubble ---
+  /* ====================================================================
+     Thinking steps
+     ==================================================================== */
   function addThinkingStep(container, type, text) {
     container.hidden = false;
-    const step = document.createElement("div");
+    var step = document.createElement("div");
     step.className = "think-step think-" + type;
-
-    const icons = {
+    var icons = {
       thought: "\uD83D\uDCAD",
       tool: "\uD83D\uDD0D",
       result: "\u2705",
@@ -350,7 +517,7 @@
   }
 
   function formatToolCall(name, input) {
-    const parts = [name.replace(/_/g, " ")];
+    var parts = [name.replace(/_/g, " ")];
     if (input) {
       if (input.query) parts.push('"' + input.query + '"');
       if (input.source_text) parts.push("in " + input.source_text);
@@ -360,55 +527,75 @@
     return parts.join(" \u2014 ");
   }
 
-  // --- Markdown renderer (supports verse blocks) ---
+  /* ====================================================================
+     Citation bar
+     ==================================================================== */
+  function addCitationBar(container, refs) {
+    var bar = document.createElement("div");
+    bar.className = "citation-bar";
+    refs.forEach(function (ref) {
+      var pill = document.createElement("span");
+      pill.className = "citation-pill";
+      pill.textContent = ref;
+      bar.appendChild(pill);
+    });
+    container.appendChild(bar);
+    scrollToBottom();
+  }
+
+  /* ====================================================================
+     Follow-up chips
+     ==================================================================== */
+  function addFollowupChips(container, questions) {
+    var wrapper = document.createElement("div");
+    wrapper.className = "followup-chips";
+    questions.forEach(function (q) {
+      var chip = document.createElement("button");
+      chip.className = "followup-chip";
+      chip.textContent = q;
+      chip.addEventListener("click", function () {
+        chatInput.value = q;
+        sendMessage();
+      });
+      wrapper.appendChild(chip);
+    });
+    container.appendChild(wrapper);
+    scrollToBottom();
+  }
+
+  /* ====================================================================
+     Markdown renderer
+     ==================================================================== */
   function renderMarkdown(text) {
-    let html = text
+    var html = text
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
 
-    // Verse quote blocks: > **BG 2.47** ... (blockquote style)
     html = html.replace(/^&gt;\s?(.*)$/gm, '<div class="verse-quote">$1</div>');
-
-    // Merge consecutive verse-quote divs into one block
     html = html.replace(/(<\/div>\n?<div class="verse-quote">)/g, "<br>");
-
-    // Bold
     html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-    // Italic
     html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
-
-    // Code/verse refs in backticks
     html = html.replace(/`([^`]+)`/g, '<code class="verse-ref">$1</code>');
-
-    // Horizontal rule
     html = html.replace(/^---$/gm, '<hr class="section-break">');
-
-    // Headers
     html = html.replace(/^### (.+)$/gm, '<h4 class="md-h4">$1</h4>');
     html = html.replace(/^## (.+)$/gm, '<h3 class="md-h3">$1</h3>');
-
-    // Lists — wrap consecutive <li> runs (non-greedy per block)
     html = html.replace(/^[-*] (.+)$/gm, "<li>$1</li>");
     html = html.replace(
       /((?:<li>.*?<\/li>\n?)+)/g,
       '<ul class="md-list">$1</ul>',
     );
-
-    // Numbered lists — wrap consecutive numbered items in <ol>
     html = html.replace(/^\d+\.\s(.+)$/gm, '<li class="ol-item">$1</li>');
     html = html.replace(
       /((?:<li class="ol-item">.*?<\/li>\n?)+)/g,
       '<ol class="md-olist">$1</ol>',
     );
 
-    // Paragraphs: split on double newlines
     html = html
       .split(/\n{2,}/)
-      .map((block) => {
+      .map(function (block) {
         block = block.trim();
         if (!block) return "";
-        // Don't wrap already-wrapped elements
         if (
           block.startsWith("<div") ||
           block.startsWith("<h") ||
@@ -426,17 +613,19 @@
     return html;
   }
 
-  // --- Copy button ---
+  /* ====================================================================
+     Copy button
+     ==================================================================== */
   function addCopyButton(contentEl) {
-    const btn = document.createElement("button");
+    var btn = document.createElement("button");
     btn.className = "copy-btn";
     btn.title = "Copy answer";
     btn.textContent = "Copy";
-    btn.addEventListener("click", () => {
-      const text = contentEl.innerText || contentEl.textContent;
-      navigator.clipboard.writeText(text).then(() => {
+    btn.addEventListener("click", function () {
+      var text = contentEl.innerText || contentEl.textContent;
+      navigator.clipboard.writeText(text).then(function () {
         btn.textContent = "Copied";
-        setTimeout(() => {
+        setTimeout(function () {
           btn.textContent = "Copy";
         }, 1500);
       });
@@ -444,29 +633,29 @@
     contentEl.appendChild(btn);
   }
 
-  // --- Source citation cards ---
+  /* ====================================================================
+     Source citation cards
+     ==================================================================== */
   function addSourceCards(container, sources) {
-    const wrapper = document.createElement("details");
+    var wrapper = document.createElement("details");
     wrapper.className = "source-cards";
-    const summary = document.createElement("summary");
+    var summary = document.createElement("summary");
     summary.textContent =
       sources.length + " source" + (sources.length !== 1 ? "s" : "") + " cited";
     wrapper.appendChild(summary);
 
-    sources.forEach((src) => {
-      const card = document.createElement("div");
+    sources.forEach(function (src) {
+      var card = document.createElement("div");
       card.className = "source-card";
-
-      let header = escHtml(src.header || "Unknown");
-      let body = escHtml(src.translation || "").substring(0, 200);
+      var header = escHtml(src.header || "Unknown");
+      var body = escHtml(src.translation || "").substring(0, 200);
       if (src.translation && src.translation.length > 200) body += "...";
-
-      const meta = src.metadata || {};
-      let tags = [meta.source_text, meta.category, meta.tradition]
+      var meta = src.metadata || {};
+      var tags = [meta.source_text, meta.category, meta.tradition]
         .filter(Boolean)
         .map(escHtml);
 
-      card.innerHTML = // eslint-disable-line
+      card.innerHTML =
         '<div class="source-header">' +
         header +
         "</div>" +
@@ -474,7 +663,9 @@
         (tags.length
           ? '<div class="source-tags">' +
             tags
-              .map((t) => '<span class="source-tag">' + t + "</span>")
+              .map(function (t) {
+                return '<span class="source-tag">' + t + "</span>";
+              })
               .join("") +
             "</div>"
           : "");
@@ -485,9 +676,11 @@
     scrollToBottom();
   }
 
-  // --- Helpers ---
+  /* ====================================================================
+     Helpers
+     ==================================================================== */
   function scrollToBottom() {
-    requestAnimationFrame(() => {
+    requestAnimationFrame(function () {
       chatMessages.scrollTop = chatMessages.scrollHeight;
     });
   }
