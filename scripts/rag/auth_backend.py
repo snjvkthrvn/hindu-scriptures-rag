@@ -20,7 +20,10 @@ import os
 import secrets
 import sqlite3
 
-from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, jsonify, redirect, render_template, request, session, url_for
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_wtf.csrf import CSRFError, CSRFProtect, validate_csrf
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from config import PROJECT_ROOT
@@ -30,6 +33,13 @@ logger = logging.getLogger(__name__)
 _DB_PATH = PROJECT_ROOT / "data" / "auth.db"
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+
+csrf = CSRFProtect()
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri=os.environ.get("RATE_LIMIT_STORAGE_URI", "memory://"),
+    default_limits=["400 per day", "120 per hour"],
+)
 
 
 def auth_required() -> bool:
@@ -291,6 +301,7 @@ def _register_google_oauth(app) -> None:
     )
 
     @auth_bp.route("/google")
+    @limiter.limit("20 per minute")
     def google_login():
         next_url = _safe_redirect_target(request.args.get("next") or "/")
         session["oauth_next"] = next_url
@@ -342,6 +353,12 @@ def register_auth(app) -> None:
     init_db()
     maybe_bootstrap_admin()
 
+    # CSRF: only validate where we call validate_csrf() (HTML forms + logout fetch header).
+    app.config.setdefault("WTF_CSRF_CHECK_DEFAULT", False)
+    app.config.setdefault("WTF_CSRF_SSL_STRICT", False)
+    csrf.init_app(app)
+    limiter.init_app(app)
+
     _register_google_oauth(app)
     app.register_blueprint(auth_bp)
     register_api_me_on_app(app)
@@ -355,6 +372,26 @@ def register_auth(app) -> None:
         app.config["SESSION_COOKIE_SECURE"] = True
         app.config["SESSION_COOKIE_HTTPONLY"] = True
         app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+    @app.after_request
+    def _security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=()",
+        )
+        if request.is_secure or os.environ.get("SESSION_COOKIE_SECURE", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        ):
+            response.headers.setdefault(
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains",
+            )
+        return response
 
     @app.before_request
     def _guest_or_auth():
@@ -418,14 +455,32 @@ def register_auth(app) -> None:
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute", exempt_when=lambda: request.method == "GET")
 def login():
     if request.method == "POST":
         if request.is_json:
+            # JSON login has no CSRF token; keep for programmatic clients / tests only.
             data = request.get_json(silent=True) or {}
             email = (data.get("email") or "").strip()
             password = data.get("password") or ""
             next_url = _safe_redirect_target(data.get("next") or "/")
         else:
+            try:
+                validate_csrf()
+            except CSRFError:
+                next_url = _safe_redirect_target(
+                    request.form.get("next") or request.args.get("next") or "/",
+                )
+                return (
+                    render_template(
+                        "login.html",
+                        error="Security check failed. Refresh the page and try again.",
+                        next_url=next_url,
+                        open_registration=open_registration(),
+                        google_oauth_enabled=google_oauth_configured(),
+                    ),
+                    403,
+                )
             email = (request.form.get("email") or "").strip()
             password = request.form.get("password") or ""
             next_url = _safe_redirect_target(
@@ -478,6 +533,13 @@ def login():
 
 @auth_bp.route("/logout", methods=["POST", "GET"])
 def logout():
+    if request.method == "POST":
+        try:
+            validate_csrf()
+        except CSRFError:
+            if request.is_json:
+                return jsonify({"error": "csrf"}), 403
+            abort(403)
     session.clear()
     if request.is_json:
         return jsonify({"ok": True})
@@ -485,6 +547,7 @@ def logout():
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
+@limiter.limit("5 per minute", exempt_when=lambda: request.method == "GET")
 def register():
     if not open_registration():
         if request.is_json:
@@ -507,6 +570,22 @@ def register():
             register_mode=True,
             open_registration=True,
             google_oauth_enabled=google_oauth_configured(),
+        )
+
+    try:
+        validate_csrf()
+    except CSRFError:
+        next_url = _safe_redirect_target(request.form.get("next") or "/")
+        return (
+            render_template(
+                "login.html",
+                error="Security check failed. Refresh the page and try again.",
+                next_url=next_url,
+                register_mode=True,
+                open_registration=True,
+                google_oauth_enabled=google_oauth_configured(),
+            ),
+            403,
         )
 
     email = (request.form.get("email") or "").strip()

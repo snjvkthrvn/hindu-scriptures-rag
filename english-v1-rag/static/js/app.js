@@ -10,6 +10,16 @@
     return RAG_PREFIX + path;
   }
 
+  function csrfHeaders() {
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const token = csrfMeta ? csrfMeta.getAttribute("content") : "";
+    const h = { "Content-Type": "application/json" };
+    if (token) {
+      h["X-CSRFToken"] = token;
+    }
+    return h;
+  }
+
   /* ====================================================================
      DOM refs
      ==================================================================== */
@@ -131,7 +141,7 @@
       fetch("/auth/logout", {
         method: "POST",
         credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
+        headers: csrfHeaders(),
         body: "{}",
       }).then(function () {
         window.location.href = RAG_PREFIX ? RAG_PREFIX + "/" : "/";

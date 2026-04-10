@@ -38,13 +38,14 @@
             {% if error %}
             <p class="msg-error auth-error">{{ error }}</p>
             {% endif %}
-            {% if google_oauth_enabled and not register_mode %}
+            {% if google_oauth_enabled %}
             <div class="auth-google-block">
                 <a class="auth-google-btn" href="{{ url_for('auth.google_login', next=next_url) }}">Continue with Google</a>
             </div>
             <p class="auth-divider"><span>or</span></p>
             {% endif %}
             <form class="auth-form" method="post" action="{% if register_mode %}{{ url_for('auth.register') }}{% else %}{{ url_for('auth.login') }}{% endif %}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="next" value="{{ next_url | e }}">
                 <label class="auth-label" for="email">Email</label>
                 <input class="auth-input" id="email" type="email" name="email" required autocomplete="username" autofocus value="{{ request.form.get('email', '') }}">
