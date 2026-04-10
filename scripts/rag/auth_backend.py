@@ -7,6 +7,9 @@ messages are consumed; then they must sign in. No automatic redirect to login on
 Optional: ADMIN_EMAIL + ADMIN_PASSWORD to create the first user when the DB is empty.
 Optional: OPEN_REGISTRATION=1 to allow POST /auth/register.
 Optional: GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET for "Sign in with Google" (OAuth 2 / OIDC).
+Google Cloud Console must list the exact callback URL, e.g. https://YOUR_DOMAIN/auth/google/callback
+If url_for() builds the wrong scheme/host behind a proxy, set OAUTH_PUBLIC_BASE_URL=https://YOUR_DOMAIN
+or the full OAUTH_GOOGLE_REDIRECT_URI=https://YOUR_DOMAIN/auth/google/callback
 
 Logged-in users: GET/PUT /api/chat/state stores conversation JSON in SQLite (user_chats).
 Guests keep using the browser only; guest RAG quota unchanged when AUTH_REQUIRED=1.
@@ -96,10 +99,16 @@ def _google_oauth_redirect_uri() -> str:
 
     Gunicorn behind Railway often sets wsgi.url_scheme to http even though users hit https.
     Google then receives redirect_uri=http://... and rejects it if only https:// is registered.
+
+    Prefer env overrides when the inferred public URL is wrong (wrong Host behind proxies,
+    custom domain vs default Railway hostname, etc.).
     """
     explicit = (os.environ.get("OAUTH_GOOGLE_REDIRECT_URI") or "").strip()
     if explicit:
         return explicit
+    base = (os.environ.get("OAUTH_PUBLIC_BASE_URL") or "").strip().rstrip("/")
+    if base:
+        return f"{base}/auth/google/callback"
     host = (request.host or "").split(":")[0].lower()
     local = host in ("localhost", "127.0.0.1") or host.startswith("127.")
     if local:
@@ -289,6 +298,7 @@ def _register_google_oauth(app) -> None:
         return
     if not google_oauth_configured():
         return
+    from authlib.integrations.base_client import OAuthError
     from authlib.integrations.flask_client import OAuth
 
     oauth = OAuth(app)
@@ -306,14 +316,26 @@ def _register_google_oauth(app) -> None:
         next_url = _safe_redirect_target(request.args.get("next") or "/")
         session["oauth_next"] = next_url
         redirect_uri = _google_oauth_redirect_uri()
+        logger.debug("Google OAuth authorize redirect_uri=%s", redirect_uri)
         return oauth.google.authorize_redirect(redirect_uri)
 
     @auth_bp.route("/google/callback")
     def google_callback():
         try:
             token = oauth.google.authorize_access_token()
+        except OAuthError as e:
+            logger.warning(
+                "Google OAuth failed: error=%s description=%s",
+                getattr(e, "error", None),
+                getattr(e, "description", None) or str(e),
+            )
+            return redirect(url_for("auth.login", error="google_failed"))
         except Exception as e:
-            logger.warning("Google OAuth token exchange failed: %s", e)
+            logger.warning(
+                "Google OAuth token exchange failed: %s",
+                e,
+                exc_info=logger.isEnabledFor(logging.DEBUG),
+            )
             return redirect(url_for("auth.login", error="google_failed"))
 
         userinfo = token.get("userinfo")
