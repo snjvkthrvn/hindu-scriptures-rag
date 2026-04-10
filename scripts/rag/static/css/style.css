@@ -405,7 +405,8 @@ body::before {
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 4rem 1.5rem 2.5rem;
+    padding: 2rem 1.5rem;
+    min-height: 100%;
     animation: fadeUp 0.7s var(--ease-out-expo);
 }
 @keyframes fadeUp {
@@ -414,34 +415,34 @@ body::before {
 }
 .welcome-om {
     font-family: var(--font-sanskrit);
-    font-size: 5.5rem;
+    font-size: 3.5rem;
     color: var(--saffron);
-    opacity: 0.15;
-    margin-bottom: 1rem;
-    animation: omPulse 4s ease-in-out infinite;
-    text-shadow: 0 0 60px rgba(232, 130, 12, 0.15);
-    filter: drop-shadow(0 0 20px rgba(232, 130, 12, 0.1));
+    opacity: 0.35;
+    margin-bottom: 0.5rem;
+    animation: omPulse 5s ease-in-out infinite;
+    text-shadow: 0 0 40px rgba(232, 130, 12, 0.1);
+    line-height: 1;
 }
 @keyframes omPulse {
-    0%, 100% { opacity: 0.15; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(1.03); }
+    0%, 100% { opacity: 0.35; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.02); }
 }
 .welcome-title {
     font-family: var(--font-display);
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     color: var(--maroon);
-    letter-spacing: 0.1em;
-    margin-bottom: 0.65rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.35rem;
     animation: fadeUp 0.7s var(--ease-out-expo) both;
     animation-delay: 0.1s;
     text-wrap: balance;
 }
 .welcome-desc {
-    font-size: 1.02rem;
-    color: var(--text-light);
-    max-width: 480px;
-    line-height: 1.7;
-    margin-bottom: 2rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    max-width: 420px;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
     animation: fadeUp 0.7s var(--ease-out-expo) both;
     animation-delay: 0.2s;
     text-wrap: pretty;
@@ -449,9 +450,9 @@ body::before {
 .welcome-prompts {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.4rem;
     justify-content: center;
-    max-width: 580px;
+    max-width: 480px;
 }
 .prompt-chip {
     font-family: var(--font-body);
@@ -460,7 +461,7 @@ body::before {
     background: var(--chip-bg);
     border: 1px solid var(--border);
     border-radius: 24px;
-    padding: 0.5rem 1.1rem;
+    padding: 0.4rem 0.9rem;
     cursor: pointer;
     transition: all 0.35s var(--ease-out-expo);
     white-space: nowrap;
@@ -491,8 +492,8 @@ body::before {
 /* Welcome — daily verse (Option B) */
 .welcome-verse {
     width: 100%;
-    max-width: 520px;
-    margin: 0 auto 1.5rem;
+    max-width: 460px;
+    margin: 0 auto 1.25rem;
     animation: fadeUp 0.7s var(--ease-out-expo) both;
     animation-delay: 0.15s;
 }
@@ -507,10 +508,10 @@ body::before {
 }
 .welcome-verse-card {
     text-align: center;
-    padding: 1.25rem 1.25rem 1.15rem;
-    background: linear-gradient(165deg, rgba(107, 29, 29, 0.05) 0%, rgba(253, 245, 230, 0.92) 100%);
+    padding: 1rem 1.1rem;
+    background: linear-gradient(165deg, rgba(107, 29, 29, 0.04) 0%, rgba(253, 245, 230, 0.9) 100%);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 12px;
     box-shadow: var(--shadow-sm);
     transition: box-shadow 0.4s var(--ease-out-expo);
 }
@@ -573,14 +574,18 @@ body::before {
     transform: translateY(0) scale(0.97);
 }
 .welcome-prompts-label {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--text-muted);
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
     animation: fadeUp 0.7s var(--ease-out-expo) both;
     animation-delay: 0.18s;
+    order: 10;
 }
+/* Push desc before the label, chips after */
+.welcome-desc { order: 5; }
+.welcome-prompts { order: 11; }
 [data-theme="dark"] .welcome-verse-card {
     background: linear-gradient(165deg, rgba(107, 29, 29, 0.25) 0%, rgba(28, 20, 16, 0.92) 100%);
 }
@@ -828,7 +833,7 @@ body::before {
    ========================================================================== */
 .chat-input-bar {
     flex-shrink: 0;
-    padding: 0.75rem 1rem 0.65rem;
+    padding: 0.6rem 1rem 0.5rem;
     background: var(--parchment);
     border-top: 1px solid var(--border);
 }
@@ -895,11 +900,12 @@ body::before {
 }
 
 .input-hint {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     color: var(--text-muted);
     text-align: center;
-    margin-top: 0.45rem;
+    margin-top: 0.3rem;
     letter-spacing: 0.02em;
+    opacity: 0.7;
 }
 
 /* ==========================================================================
@@ -1075,15 +1081,15 @@ body::before {
     .msg-content { padding: 0.8rem 0.9rem; font-size: 0.95rem; max-width: none; }
     .msg-avatar { width: 28px; height: 28px; font-size: 0.95rem; }
 
-    .welcome { padding: 2rem 0.75rem 1.5rem; }
-    .welcome-om { font-size: 4rem; }
+    .welcome { padding: 1.5rem 0.75rem; }
+    .welcome-om { font-size: 2.8rem; }
     .welcome-title { font-size: 1.25rem; }
-    .welcome-desc { font-size: 0.9rem; margin-bottom: 1.25rem; }
-    .welcome-verse { max-width: 100%; margin-bottom: 1rem; }
+    .welcome-desc { font-size: 0.85rem; margin-bottom: 1rem; }
+    .welcome-verse { max-width: 100%; margin-bottom: 0.85rem; }
     .welcome-verse-dev { font-size: 1rem; }
     .verse-cta { font-size: 0.78rem; padding: 0.35rem 0.75rem; }
-    .welcome-prompts { gap: 0.4rem; }
-    .prompt-chip { font-size: 0.82rem; padding: 0.45rem 0.85rem; }
+    .welcome-prompts { gap: 0.35rem; max-width: 100%; }
+    .prompt-chip { font-size: 0.82rem; padding: 0.4rem 0.8rem; }
 
     .source-card { padding: 0.55rem 0.7rem; }
     .input-hint { font-size: 0.65rem; }
@@ -1103,14 +1109,14 @@ body::before {
     #newChatBtn { display: none; }
     .theme-toggle { width: 26px; height: 26px; font-size: 0.85rem; }
 
-    .welcome { padding: 1.5rem 0.5rem 1rem; }
-    .welcome-om { font-size: 3.5rem; }
+    .welcome { padding: 1rem 0.5rem; }
+    .welcome-om { font-size: 2.4rem; }
     .welcome-title { font-size: 1.1rem; }
-    .welcome-desc { font-size: 0.85rem; }
-    .welcome-verse-card { padding: 0.9rem 0.85rem; }
+    .welcome-desc { font-size: 0.82rem; }
+    .welcome-verse-card { padding: 0.8rem 0.75rem; }
     .welcome-verse-dev { font-size: 0.9rem; }
-    .welcome-verse-eng { font-size: 0.88rem; }
-    .prompt-chip { font-size: 0.78rem; padding: 0.4rem 0.75rem; }
+    .welcome-verse-eng { font-size: 0.85rem; }
+    .prompt-chip { font-size: 0.75rem; padding: 0.35rem 0.65rem; }
     .verse-cta { font-size: 0.72rem; padding: 0.3rem 0.65rem; }
 
     .msg-content { padding: 0.7rem 0.8rem; font-size: 0.9rem; }
