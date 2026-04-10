@@ -47,6 +47,20 @@
             <div class="welcome" id="welcome">
                 <div class="welcome-om">&#x0950;</div>
                 <h2 class="welcome-title">Ask the Scriptures</h2>
+                <section class="welcome-verse" id="welcomeVerseSection" hidden aria-labelledby="welcomeVerseHeading">
+                    <h3 class="welcome-verse-heading" id="welcomeVerseHeading">Today&rsquo;s verse</h3>
+                    <div class="welcome-verse-card">
+                        <div class="welcome-verse-ref" id="welcomeVerseRef"></div>
+                        <div class="welcome-verse-dev" id="welcomeVerseDev" hidden></div>
+                        <div class="welcome-verse-iast" id="welcomeVerseIast" hidden></div>
+                        <p class="welcome-verse-eng" id="welcomeVerseEng"></p>
+                    </div>
+                    <div class="verse-cta-row">
+                        <button type="button" class="verse-cta" id="verseCtaExplain" aria-label="Prime input: explain this verse simply">Explain this verse simply</button>
+                        <button type="button" class="verse-cta" id="verseCtaApply" aria-label="Prime input: how this applies today">How does this apply today?</button>
+                    </div>
+                </section>
+                <p class="welcome-prompts-label" id="welcomePromptsLabel" hidden>Or try a prompt</p>
                 <p class="welcome-desc">I search across ~14,000 English-translated verses from the Rigveda, Upanishads, Bhagavad Gita, Mahabharata, Ramayana, Yoga Sutras, and more. I'll quote the texts and break them down for you.</p>
                 <div class="welcome-prompts">
                     <button class="prompt-chip" data-q="What does the Bhagavad Gita say about overcoming anxiety and fear?">Overcoming anxiety</button>

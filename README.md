@@ -75,10 +75,10 @@ The chat servers depend on **`requirements-rag.txt`** (Flask, Qdrant, Cohere, An
 
 **Implementation checklist**
 
-- [ ] Add `welcome-verses.json` with at least 30 corpus-safe entries.
-- [ ] Mark up verse region + CTAs in `scripts/rag/templates/index.html` and `english-v1-rag/templates/index.html`.
-- [ ] Style `.welcome-verse` / CTAs in both `style.css` copies.
-- [ ] In `app.js` (both copies): fetch JSON, compute index, render text, bind CTAs to prime `chatInput` only; ensure welcome hidden logic still works when sending first message.
+- [x] Add `welcome-verses.json` with at least 30 corpus-safe entries (`scripts/rag/static/data/` and `english-v1-rag/static/data/`).
+- [x] Mark up verse region + CTAs in `scripts/rag/templates/index.html` and `english-v1-rag/templates/index.html`.
+- [x] Style `.welcome-verse` / CTAs in both `style.css` copies.
+- [x] In `app.js` (both copies): fetch JSON, compute index, render text, bind CTAs to prime `chatInput` only; welcome hide logic unchanged.
 - [ ] Manual test: same verse same day; CTAs prime; chips auto-send; dark theme readable.
 
 ## Directory Structure

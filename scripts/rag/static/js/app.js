@@ -868,6 +868,93 @@
   }
 
   /* ====================================================================
+     Welcome verse of the day (Option B)
+     ==================================================================== */
+  var currentWelcomeRef = "";
+
+  function welcomeVersesJsonUrl() {
+    return RAG_PREFIX + "/static/data/welcome-verses.json";
+  }
+
+  function dayOfYearLocal(d) {
+    var start = new Date(d.getFullYear(), 0, 0);
+    var diff = d - start;
+    return Math.floor(diff / 86400000);
+  }
+
+  function loadWelcomeVerse() {
+    var section = document.getElementById("welcomeVerseSection");
+    var refEl = document.getElementById("welcomeVerseRef");
+    var devEl = document.getElementById("welcomeVerseDev");
+    var iastEl = document.getElementById("welcomeVerseIast");
+    var engEl = document.getElementById("welcomeVerseEng");
+    var promptLabel = document.getElementById("welcomePromptsLabel");
+    if (!section || !refEl || !engEl) return;
+
+    fetch(welcomeVersesJsonUrl(), { credentials: "same-origin" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("bad");
+        return r.json();
+      })
+      .then(function (list) {
+        if (!Array.isArray(list) || list.length === 0) throw new Error("empty");
+        var idx = dayOfYearLocal(new Date()) % list.length;
+        var v = list[idx];
+        if (!v || !v.ref || !v.eng) throw new Error("bad row");
+        currentWelcomeRef = v.ref;
+        refEl.textContent = v.ref;
+        engEl.textContent = v.eng;
+        if (v.dev && String(v.dev).trim()) {
+          devEl.textContent = v.dev;
+          devEl.hidden = false;
+        } else {
+          devEl.textContent = "";
+          devEl.hidden = true;
+        }
+        if (v.iast && String(v.iast).trim()) {
+          iastEl.textContent = v.iast;
+          iastEl.hidden = false;
+        } else {
+          iastEl.textContent = "";
+          iastEl.hidden = true;
+        }
+        section.hidden = false;
+        if (promptLabel) promptLabel.hidden = false;
+      })
+      .catch(function () {
+        currentWelcomeRef = "";
+        section.hidden = true;
+        if (promptLabel) promptLabel.hidden = true;
+      });
+  }
+
+  function primeVerseQuestion(template) {
+    if (!currentWelcomeRef) return;
+    chatInput.value = template.replace(/\{ref\}/g, currentWelcomeRef);
+    chatInput.dispatchEvent(new Event("input", { bubbles: true }));
+    chatInput.focus();
+  }
+
+  var verseCtaExplain = document.getElementById("verseCtaExplain");
+  var verseCtaApply = document.getElementById("verseCtaApply");
+  if (verseCtaExplain) {
+    verseCtaExplain.addEventListener("click", function () {
+      primeVerseQuestion(
+        "Please explain {ref} in simple, plain language. What is this verse saying, and why does it matter?",
+      );
+    });
+  }
+  if (verseCtaApply) {
+    verseCtaApply.addEventListener("click", function () {
+      primeVerseQuestion(
+        "How can the teaching in {ref} apply to daily life today? Please stay grounded in scripture.",
+      );
+    });
+  }
+
+  loadWelcomeVerse();
+
+  /* ====================================================================
      Helpers
      ==================================================================== */
   function scrollToBottom() {

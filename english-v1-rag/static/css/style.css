@@ -449,6 +449,97 @@ body::before {
     transform: translateY(0) scale(0.97);
 }
 
+/* Welcome — daily verse (Option B) */
+.welcome-verse {
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto 1.25rem;
+    animation: fadeUp 0.55s ease both;
+    animation-delay: 0.15s;
+}
+.welcome-verse-heading {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--saffron);
+    margin-bottom: 0.65rem;
+    font-weight: 600;
+}
+.welcome-verse-card {
+    text-align: center;
+    padding: 1rem 1.1rem 1.1rem;
+    background: linear-gradient(165deg, rgba(107, 29, 29, 0.07) 0%, rgba(253, 245, 230, 0.95) 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+}
+.welcome-verse-ref {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    color: var(--maroon);
+    margin-bottom: 0.65rem;
+}
+.welcome-verse-dev {
+    font-family: var(--font-sanskrit);
+    font-size: 1.15rem;
+    line-height: 1.55;
+    color: var(--text);
+    margin-bottom: 0.45rem;
+}
+.welcome-verse-iast {
+    font-size: 0.88rem;
+    font-style: italic;
+    color: var(--text-light);
+    line-height: 1.45;
+    margin-bottom: 0.55rem;
+}
+.welcome-verse-eng {
+    font-size: 0.95rem;
+    color: var(--text);
+    line-height: 1.55;
+    margin: 0;
+}
+.verse-cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 0.85rem;
+}
+.verse-cta {
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    color: var(--saffron);
+    background: var(--chip-bg);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 0.4rem 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.verse-cta:hover {
+    background: var(--chip-hover-bg);
+    color: var(--chip-hover-text);
+    border-color: var(--chip-hover-bg);
+}
+.welcome-prompts-label {
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.65rem;
+    animation: fadeUp 0.5s ease both;
+    animation-delay: 0.18s;
+}
+[data-theme="dark"] .welcome-verse-card {
+    background: linear-gradient(165deg, rgba(107, 29, 29, 0.25) 0%, rgba(28, 20, 16, 0.92) 100%);
+}
+[data-theme="dark"] .welcome-verse-ref {
+    color: var(--gold-light);
+}
+
 /* ==========================================================================
    MESSAGE BUBBLES
    ========================================================================== */
@@ -925,6 +1016,9 @@ body::before {
     .welcome { padding: 2rem 0.5rem 1.5rem; }
     .welcome-title { font-size: 1.25rem; }
     .welcome-desc { font-size: 0.9rem; margin-bottom: 1.25rem; }
+    .welcome-verse { max-width: 100%; margin-bottom: 1rem; }
+    .welcome-verse-dev { font-size: 1rem; }
+    .verse-cta { font-size: 0.78rem; padding: 0.35rem 0.75rem; }
     .welcome-prompts { gap: 0.4rem; }
     .prompt-chip { font-size: 0.82rem; padding: 0.5rem 0.85rem; }
     .msg-content { padding: 0.8rem 0.9rem; font-size: 0.95rem; }
