@@ -245,8 +245,11 @@ body::before {
 
 .header-auth {
     display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 0.3rem;
+    min-width: 0;
     overflow: hidden;
 }
 .header-auth .auth-guest-hint {
