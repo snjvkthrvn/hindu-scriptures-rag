@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if register_mode %}Create account{% else %}Sign in{% endif %} — Hindu Scriptures</title>
     <meta name="theme-color" content="#3D0C0C">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <script>
     (function () {
         var t = localStorage.getItem("hs-theme");
@@ -56,7 +57,7 @@
                 <input class="auth-input" id="password2" type="password" name="password2" required autocomplete="new-password">
                 {% endif %}
 
-                <button type="submit" class="auth-submit header-btn">
+                <button type="submit" class="auth-submit">
                     {% if register_mode %}Register{% else %}Sign in{% endif %}
                 </button>
             </form>
