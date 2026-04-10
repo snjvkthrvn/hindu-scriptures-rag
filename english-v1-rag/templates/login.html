@@ -10,6 +10,9 @@
 <body>
     <div class="app-shell auth-login-shell">
         <main class="auth-panel">
+            <p class="auth-back">
+                <a href="{{ next_url|safe_next_path }}" title="Return to the app without signing in">← Back to app</a>
+            </p>
             <div class="welcome-om auth-login-om">&#x0950;</div>
             <h1 class="welcome-title">{% if register_mode %}Create account{% else %}Sign in{% endif %}</h1>
             {% if error %}
@@ -24,7 +27,7 @@
             <form class="auth-form" method="post" action="{% if register_mode %}{{ url_for('auth.register') }}{% else %}{{ url_for('auth.login') }}{% endif %}">
                 <input type="hidden" name="next" value="{{ next_url | e }}">
                 <label class="auth-label" for="email">Email</label>
-                <input class="auth-input" id="email" type="email" name="email" required autocomplete="username" value="{{ request.form.get('email', '') }}">
+                <input class="auth-input" id="email" type="email" name="email" required autocomplete="username" autofocus value="{{ request.form.get('email', '') }}">
 
                 <label class="auth-label" for="password">Password</label>
                 <input class="auth-input" id="password" type="password" name="password" required autocomplete="{% if register_mode %}new-password{% else %}current-password{% endif %}">

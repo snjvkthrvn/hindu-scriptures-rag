@@ -4,11 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if register_mode %}Create account{% else %}Sign in{% endif %} — Hindu Scriptures</title>
+    <meta name="theme-color" content="#3D0C0C">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="app-shell" style="min-height:100vh;min-height:100dvh;justify-content:center;padding:2rem 1rem;">
         <main class="auth-panel" style="max-width:400px;margin:0 auto;text-align:center;">
+            <p class="auth-back">
+                <a href="{{ next_url|safe_next_path }}" title="Return to the app without signing in">← Back to app</a>
+            </p>
             <div class="welcome-om" style="font-size:3rem;margin-bottom:0.5rem;">&#x0950;</div>
             <h1 class="welcome-title">{% if register_mode %}Create account{% else %}Sign in{% endif %}</h1>
             {% if error %}
@@ -23,7 +27,7 @@
             <form method="post" action="{% if register_mode %}{{ url_for('auth.register') }}{% else %}{{ url_for('auth.login') }}{% endif %}" style="text-align:left;margin-top:1.25rem;">
                 <input type="hidden" name="next" value="{{ next_url | e }}">
                 <label style="display:block;font-size:0.75rem;margin-bottom:0.35rem;">Email</label>
-                <input type="email" name="email" required autocomplete="username" value="{{ request.form.get('email', '') }}"
+                <input type="email" name="email" required autocomplete="username" autofocus value="{{ request.form.get('email', '') }}"
                     style="width:100%;padding:0.55rem;margin-bottom:0.85rem;box-sizing:border-box;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);">
 
                 <label style="display:block;font-size:0.75rem;margin-bottom:0.35rem;">Password</label>

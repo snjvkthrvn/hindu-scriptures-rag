@@ -71,6 +71,16 @@ def _is_counted_rag_post(path: str, method: str) -> bool:
     return any(path.endswith(s) for s in suffixes)
 
 
+def _safe_redirect_target(url: str | None) -> str:
+    """Allow only same-origin relative paths for post-login redirects (open-redirect defense)."""
+    u = (url or "").strip()
+    if not u or not u.startswith("/") or u.startswith("//"):
+        return "/"
+    if "\\" in u or "\r" in u or "\n" in u:
+        return "/"
+    return u
+
+
 def _connect() -> sqlite3.Connection:
     _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(_DB_PATH)
@@ -266,7 +276,7 @@ def _register_google_oauth(app) -> None:
 
     @auth_bp.route("/google")
     def google_login():
-        next_url = (request.args.get("next") or "/").strip() or "/"
+        next_url = _safe_redirect_target(request.args.get("next") or "/")
         session["oauth_next"] = next_url
         redirect_uri = url_for("auth.google_callback", _external=True)
         return oauth.google.authorize_redirect(redirect_uri)
@@ -307,7 +317,7 @@ def _register_google_oauth(app) -> None:
         session["user_email"] = get_user_email(uid) or email
         session.pop("guest_msgs", None)
         session.permanent = True
-        next_url = session.pop("oauth_next", None) or "/"
+        next_url = _safe_redirect_target(session.pop("oauth_next", None) or "/")
         return redirect(next_url)
 
 
@@ -320,6 +330,10 @@ def register_auth(app) -> None:
     app.register_blueprint(auth_bp)
     register_api_me_on_app(app)
     register_chat_api(app)
+
+    @app.template_filter("safe_next_path")
+    def _safe_next_path(url: str | None) -> str:
+        return _safe_redirect_target(url)
 
     if os.environ.get("SESSION_COOKIE_SECURE", "").strip().lower() in ("1", "true", "yes"):
         app.config["SESSION_COOKIE_SECURE"] = True
@@ -394,11 +408,13 @@ def login():
             data = request.get_json(silent=True) or {}
             email = (data.get("email") or "").strip()
             password = data.get("password") or ""
-            next_url = data.get("next") or "/"
+            next_url = _safe_redirect_target(data.get("next") or "/")
         else:
             email = (request.form.get("email") or "").strip()
             password = request.form.get("password") or ""
-            next_url = request.form.get("next") or request.args.get("next") or "/"
+            next_url = _safe_redirect_target(
+                request.form.get("next") or request.args.get("next") or "/",
+            )
         uid = verify_login(email, password)
         if uid is None:
             row = _user_row_by_email(email)
@@ -423,10 +439,10 @@ def login():
         session.permanent = True
         if request.is_json:
             return jsonify({"ok": True, "email": session["user_email"]})
-        return redirect(next_url or "/")
+        return redirect(next_url)
 
     if request.method == "GET":
-        next_url = request.args.get("next") or "/"
+        next_url = _safe_redirect_target(request.args.get("next") or "/")
         err = None
         qe = request.args.get("error")
         if qe == "google_failed":
@@ -470,7 +486,7 @@ def register():
     if request.method == "GET":
         return render_template(
             "login.html",
-            next_url=request.args.get("next") or "/",
+            next_url=_safe_redirect_target(request.args.get("next") or "/"),
             error=None,
             register_mode=True,
             open_registration=True,
@@ -480,7 +496,7 @@ def register():
     email = (request.form.get("email") or "").strip()
     password = request.form.get("password") or ""
     password2 = request.form.get("password2") or ""
-    next_url = request.form.get("next") or "/"
+    next_url = _safe_redirect_target(request.form.get("next") or "/")
     if len(password) < 8:
         return (
             render_template(
@@ -523,7 +539,7 @@ def register():
         session["user_email"] = get_user_email(uid) or email
         session.pop("guest_msgs", None)
         session.permanent = True
-    return redirect(next_url or "/")
+    return redirect(next_url)
 
 
 def register_chat_api(app) -> None:

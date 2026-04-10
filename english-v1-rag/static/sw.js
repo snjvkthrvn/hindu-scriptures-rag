@@ -1,4 +1,4 @@
-var CACHE_NAME = "hs-rag-v1";
+var CACHE_NAME = "hs-rag-v2";
 var PRECACHE = ["/", "/static/css/style.css", "/static/js/app.js"];
 
 self.addEventListener("install", function (e) {
@@ -32,6 +32,7 @@ self.addEventListener("fetch", function (e) {
 
   var url = new URL(e.request.url);
   if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname.startsWith("/auth")) return;
 
   e.respondWith(
     fetch(e.request)

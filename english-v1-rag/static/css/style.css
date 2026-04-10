@@ -950,6 +950,23 @@ body::before {
     justify-content: center;
     padding: 2rem 1rem;
 }
+.auth-back {
+    margin: 0 0 1rem 0;
+    text-align: left;
+}
+.auth-back a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-family: var(--font-body);
+}
+.auth-back a:hover {
+    color: var(--saffron);
+    text-decoration: underline;
+}
 .auth-panel {
     width: 100%;
     max-width: 400px;
