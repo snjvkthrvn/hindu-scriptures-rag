@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config import RAGConfig
 from prompt_templates import AGENT_SYSTEM_PROMPT
+from voices import get_voice_prompt
 import llm as llm_module
 from agent.tools import TOOL_DEFINITIONS, execute_tool
 from agent.conversation import ConversationMemory
@@ -26,6 +27,7 @@ def run_agent(
     question: str,
     config: RAGConfig | None = None,
     memory: ConversationMemory | None = None,
+    voice: str | None = None,
 ) -> dict:
     """Run the agentic RAG loop.
 
@@ -38,6 +40,10 @@ def run_agent(
     """
     if config is None:
         config = RAGConfig()
+
+    system_prompt = AGENT_SYSTEM_PROMPT.format(
+        voice_block=get_voice_prompt(voice),
+    )
 
     # Build messages from conversation memory + new question
     if memory is None:
@@ -52,7 +58,7 @@ def run_agent(
     for turn in range(max_turns):
         # Call Claude with tools
         response = llm_module.generate_with_tools(
-            system=AGENT_SYSTEM_PROMPT,
+            system=system_prompt,
             messages=messages,
             tools=TOOL_DEFINITIONS,
             config=config,
@@ -144,6 +150,7 @@ def run_agent_stream(
     question: str,
     config: RAGConfig | None = None,
     history: list | None = None,
+    voice: str | None = None,
 ):
     """Streaming version — yields SSE events for the frontend.
 
@@ -156,6 +163,10 @@ def run_agent_stream(
     """
     if config is None:
         config = RAGConfig()
+
+    system_prompt = AGENT_SYSTEM_PROMPT.format(
+        voice_block=get_voice_prompt(voice),
+    )
 
     memory = ConversationMemory(window=config.conversation_window)
     if history:
@@ -170,7 +181,7 @@ def run_agent_stream(
 
     for turn in range(max_turns):
         response = llm_module.generate_with_tools(
-            system=AGENT_SYSTEM_PROMPT,
+            system=system_prompt,
             messages=messages,
             tools=TOOL_DEFINITIONS,
             config=config,

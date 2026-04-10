@@ -17,6 +17,7 @@ from flask import Flask, Response, jsonify, render_template, request, stream_wit
 
 from auth_backend import register_auth
 from config import RAGConfig, PROJECT_ROOT
+from voices import VOICES
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
@@ -145,6 +146,14 @@ def api_query():
     })
 
 
+@app.route("/api/voices")
+def api_voices():
+    return jsonify({
+        key: {"name": v["name"], "is_default": v.get("is_default", False)}
+        for key, v in VOICES.items()
+    })
+
+
 @app.route("/api/agent", methods=["POST"])
 def api_agent():
     """Agentic RAG query — Claude reasons, calls tools, synthesizes."""
@@ -154,6 +163,7 @@ def api_agent():
     data = request.get_json(silent=True) or {}
     question = (data.get("question") or "").strip()
     history = data.get("history") or []
+    voice = (data.get("voice") or "").strip() or None
 
     if not question:
         return jsonify({"error": "No question provided"}), 400
@@ -166,7 +176,7 @@ def api_agent():
         memory.add(msg.get("role", "user"), msg.get("content", ""))
 
     try:
-        result = run_agent(question, config=config, memory=memory)
+        result = run_agent(question, config=config, memory=memory, voice=voice)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -181,6 +191,7 @@ def api_agent_stream():
     data = request.get_json(silent=True) or {}
     question = (data.get("question") or "").strip()
     history = data.get("history") or []
+    voice = (data.get("voice") or "").strip() or None
 
     if not question:
         return jsonify({"error": "No question provided"}), 400
@@ -189,7 +200,9 @@ def api_agent_stream():
 
     def event_stream():
         try:
-            for event in run_agent_stream(question, config=config, history=history):
+            for event in run_agent_stream(
+                question, config=config, history=history, voice=voice,
+            ):
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
