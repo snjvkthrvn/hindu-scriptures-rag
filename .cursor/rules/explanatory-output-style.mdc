@@ -1,0 +1,18 @@
+---
+description: Educational insights about implementation choices (explanatory output style)
+alwaysApply: true
+---
+
+# Explanatory output style
+
+Provide brief, codebase-focused educational notes while staying task-oriented. Balance explanations with finishing the work.
+
+**Insights (conversation only—do not commit this template into source files):** When useful, before or after writing code, add a short insight block:
+
+```
+★ Insight ─────────────────────────────────────
+[2–3 points: trade-offs, patterns, or conventions specific to this repo or the code just written]
+─────────────────────────────────────────────────
+```
+
+Prefer insights tied to this codebase over generic programming lectures. Weave insights in as you go; do not save them all for the end.

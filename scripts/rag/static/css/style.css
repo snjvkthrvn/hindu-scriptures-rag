@@ -132,16 +132,19 @@ body::before {
    ========================================================================== */
 .chat-header {
     flex-shrink: 0;
-    height: var(--header-h);
+    min-height: var(--header-h);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 1.25rem;
+    padding: 0.5rem 1.25rem;
     background: var(--header-bg);
     color: var(--header-text);
     border-bottom: 2px solid var(--gold);
     z-index: 10;
     position: relative;
+    gap: 0.75rem;
+    flex-wrap: nowrap;
+    overflow: hidden;
 }
 .chat-header::after {
     content: "";
@@ -161,6 +164,7 @@ body::before {
     display: flex;
     align-items: center;
     gap: 0.65rem;
+    flex-shrink: 0;
 }
 .header-om {
     font-family: var(--font-sanskrit);
@@ -184,7 +188,10 @@ body::before {
 .header-right {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
+    flex-shrink: 1;
+    min-width: 0;
+    flex-wrap: nowrap;
 }
 .corpus-badge {
     font-size: 0.7rem;
@@ -206,6 +213,8 @@ body::before {
     padding: 0.35rem 0.75rem;
     cursor: pointer;
     transition: all 0.3s var(--ease-out-expo);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 .header-btn:hover {
     background: rgba(240, 215, 140, 0.14);
@@ -219,8 +228,8 @@ body::before {
 .header-auth {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 0.45rem;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
     justify-content: flex-end;
 }
 .header-auth .auth-guest-hint {
@@ -1043,29 +1052,74 @@ body::before {
 /* ==========================================================================
    RESPONSIVE
    ========================================================================== */
+
+/* --- Tablet and below: hide corpus badge, compact header --- */
+@media (max-width: 860px) {
+    .corpus-badge { display: none; }
+    .header-btn { font-size: 0.65rem; padding: 0.3rem 0.55rem; }
+}
+
+/* --- Small tablet / large phone (481–640px) --- */
 @media (max-width: 640px) {
     .app-shell { max-width: 100%; }
-    .chat-header { padding: 0 0.75rem; }
+    .chat-header { padding: 0.4rem 0.75rem; }
     .header-title { font-size: 0.95rem; }
     .header-sub { display: none; }
-    .corpus-badge { display: none; }
-    .header-auth .auth-guest-hint { max-width: 120px; font-size: 0.6rem; }
+    .header-om { font-size: 1.6rem; }
+    .header-auth .auth-guest-hint { max-width: 100px; font-size: 0.58rem; }
+    .header-btn { font-size: 0.6rem; padding: 0.28rem 0.5rem; }
+    .theme-toggle { width: 28px; height: 28px; font-size: 0.95rem; }
+
     .chat-messages { padding: 1rem 0.65rem; }
     .msg-bubble { max-width: 95%; }
+    .msg-content { padding: 0.8rem 0.9rem; font-size: 0.95rem; max-width: none; }
     .msg-avatar { width: 28px; height: 28px; font-size: 0.95rem; }
-    .welcome { padding: 2rem 0.5rem 1.5rem; }
+
+    .welcome { padding: 2rem 0.75rem 1.5rem; }
+    .welcome-om { font-size: 4rem; }
     .welcome-title { font-size: 1.25rem; }
     .welcome-desc { font-size: 0.9rem; margin-bottom: 1.25rem; }
     .welcome-verse { max-width: 100%; margin-bottom: 1rem; }
     .welcome-verse-dev { font-size: 1rem; }
     .verse-cta { font-size: 0.78rem; padding: 0.35rem 0.75rem; }
     .welcome-prompts { gap: 0.4rem; }
-    .prompt-chip { font-size: 0.82rem; padding: 0.5rem 0.85rem; }
-    .msg-content { padding: 0.8rem 0.9rem; font-size: 0.95rem; }
+    .prompt-chip { font-size: 0.82rem; padding: 0.45rem 0.85rem; }
+
     .source-card { padding: 0.55rem 0.7rem; }
     .input-hint { font-size: 0.65rem; }
+    .chat-input-bar { padding: 0.6rem 0.65rem 0.5rem; }
 }
 
+/* --- Phone (≤ 400px) --- */
+@media (max-width: 400px) {
+    .chat-header { padding: 0.35rem 0.5rem; gap: 0.4rem; }
+    .header-left { gap: 0.4rem; }
+    .header-om { font-size: 1.4rem; }
+    .header-title { font-size: 0.82rem; letter-spacing: 0.04em; }
+    .header-right { gap: 0.25rem; }
+    .header-auth { gap: 0.2rem; }
+    .header-btn { font-size: 0.55rem; padding: 0.22rem 0.4rem; letter-spacing: 0.03em; }
+    #settingsBtn { font-size: 0.9rem; padding: 0.2rem 0.35rem; }
+    #newChatBtn { display: none; }
+    .theme-toggle { width: 26px; height: 26px; font-size: 0.85rem; }
+
+    .welcome { padding: 1.5rem 0.5rem 1rem; }
+    .welcome-om { font-size: 3.5rem; }
+    .welcome-title { font-size: 1.1rem; }
+    .welcome-desc { font-size: 0.85rem; }
+    .welcome-verse-card { padding: 0.9rem 0.85rem; }
+    .welcome-verse-dev { font-size: 0.9rem; }
+    .welcome-verse-eng { font-size: 0.88rem; }
+    .prompt-chip { font-size: 0.78rem; padding: 0.4rem 0.75rem; }
+    .verse-cta { font-size: 0.72rem; padding: 0.3rem 0.65rem; }
+
+    .msg-content { padding: 0.7rem 0.8rem; font-size: 0.9rem; }
+    .msg-avatar { width: 24px; height: 24px; font-size: 0.85rem; }
+    .input-wrapper { border-radius: 12px; padding: 0.4rem 0.4rem 0.4rem 0.85rem; }
+    .send-btn { width: 36px; height: 36px; border-radius: 10px; }
+}
+
+/* --- Desktop (wide) --- */
 @media (min-width: 861px) {
     .app-shell {
         border-left: 1px solid var(--border);
