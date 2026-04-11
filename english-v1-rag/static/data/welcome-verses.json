@@ -30,10 +30,10 @@
     "eng": "From wherever the restless, unsteady mind wanders, from there one should draw it back and hold it under the self’s rule."
   },
   {
-    "ref": "Bhagavad Gītā 12.13",
-    "dev": "अद्वेष्टा सर्वभूतानां मैत्रः करुण एव च।\nनिर्ममो निरहङ्कारः समदुःखसुखः क्षमी॥",
-    "iast": "adveṣṭā sarva-bhūtānāṃ maitraḥ karuṇa eva ca\nnirmamo nirahaṅkāraḥ sama-duḥkha-sukhaḥ kṣamī",
-    "eng": "He hates no creature, is friendly and compassionate to all, free from possessiveness and pride, the same in joy and sorrow, and patient."
+    "ref": "Bhagavad Gītā 2.70",
+    "dev": "आपूर्यमाणमचलप्रतिष्ठं समुद्रमापः प्रविशन्ति यद्वत्।\nतद्वत्कामा यं प्रविशन्ति सर्वे स शान्तिमाप्नोति न कामकामी॥",
+    "iast": "āpūryamāṇam acala-pratiṣṭhaṃ samudram āpaḥ praviśanti yadvat\ntadvat kāmā yaṃ praviśanti sarve sa śāntim āpnoti na kāma-kāmī",
+    "eng": "The one into whom all desires enter as waters enter the ocean, which though ever being filled remains unmoved, attains peace; not the one who longs for them."
   },
   {
     "ref": "Bhagavad Gītā 18.66",
@@ -48,10 +48,10 @@
     "eng": "The Lord envelops all this — whatever moves in this world. Enjoy through renunciation; do not covet anyone’s wealth."
   },
   {
-    "ref": "Kena Upaniṣad 2.1",
-    "dev": "श्रोत्रस्य श्रोत्रं मनसो मनो यद्वाचो ह वाचः स उ प्राणस्य प्राणः।",
-    "iast": "śrotasya śrotraṃ manaso mano yad vāco ha vācaḥ sa u prāṇasya prāṇaḥ",
-    "eng": "The hearing of hearing, the thinking of thought, the speaking of speech, the life-breath of breath — That is what is to be known."
+    "ref": "Bhagavad Gītā 2.20",
+    "dev": "न जायते म्रियते वा कदाचिन्नायं भूत्वा भविता वा न भूयः।\nअजो नित्यः शाश्वतोऽयं पुराणो न हन्यते हन्यमाने शरीरे॥",
+    "iast": "na jāyate mriyate vā kadācin nāyaṃ bhūtvā bhavitā vā na bhūyaḥ\najo nityaḥ śāśvato 'yaṃ purāṇo na hanyate hanyamāne śarīre",
+    "eng": "It is never born, nor does it ever die; nor, having been, does it ever cease to be. Unborn, eternal, changeless, ancient, it is not slain when the body is slain."
   },
   {
     "ref": "Katha Upaniṣad 1.2.20",
@@ -72,10 +72,10 @@
     "eng": "Two birds, close companions, cling to one tree: one eats the sweet fruit, the other watches without eating."
   },
   {
-    "ref": "Chāndogya Upaniṣad 6.8.7",
-    "dev": "तत्त्वमसि श्वेतकेतो।",
-    "iast": "tat tvam asi śvetaketo",
-    "eng": "That thou art, O Śvetaketu."
+    "ref": "Bhagavad Gītā 3.35",
+    "dev": "श्रेयान्स्वधर्मो विगुणः परधर्मात्स्वनुष्ठितात्।\nस्वधर्मे निधनं श्रेयः परधर्मो भयावहः॥",
+    "iast": "śreyān svadharmo viguṇaḥ para-dharmāt svanuṣṭhitāt\nsvadharme nidhanaṃ śreyaḥ para-dharmo bhayāvahaḥ",
+    "eng": "Better is one’s own duty, though imperfect, than another’s duty well performed. Better to die in one’s own duty; another’s duty is fraught with fear."
   },
   {
     "ref": "Bṛhadāraṇyaka Upaniṣad 1.3.28–30",
@@ -84,16 +84,16 @@
     "eng": "Lead me from unreality to reality; from darkness to light; from death to immortality."
   },
   {
-    "ref": "Praśna Upaniṣad 6.7",
-    "dev": "यः पृथिव्यां तिष्ठन्पृथिव्या अन्तरः।",
-    "iast": "yaḥ pṛthivyāṃ tiṣṭhan pṛthivyā antaraḥ",
-    "eng": "He who dwells in earth, yet is within earth — whom earth does not know."
+    "ref": "Bhagavad Gītā 4.39",
+    "dev": "श्रद्धावान् लभते ज्ञानं तत्परः संयतेन्द्रियः।\nज्ञानं लब्ध्वा परां शान्तिमचिरेणाधिगच्छति॥",
+    "iast": "śraddhāvān labhate jñānaṃ tat-paraḥ saṃyatendriyaḥ\njñānaṃ labdhvā parāṃ śāntim acireṇādhigacchati",
+    "eng": "The one who has faith, is devoted, and has mastered the senses gains knowledge; having gained knowledge, one soon attains supreme peace."
   },
   {
-    "ref": "Taittirīya Upaniṣad 3.1.1",
-    "dev": "सत्यं ज्ञानमनन्तं ब्रह्म।",
-    "iast": "satyaṃ jñānam anantaṃ brahma",
-    "eng": "Brahman is truth, knowledge, infinite."
+    "ref": "Bhagavad Gītā 5.10",
+    "dev": "ब्रह्मण्याधाय कर्माणि सङ्गं त्यक्त्वा करोति यः।\nलिप्यते न स पापेन पद्मपत्रमिवाम्भसा॥",
+    "iast": "brahmaṇy ādhāya karmāṇi saṅgaṃ tyaktvā karoti yaḥ\nlipyate na sa pāpena padma-patram ivāmbhasā",
+    "eng": "One who acts, offering all actions to Brahman and giving up attachment, is not tainted by sin, just as a lotus leaf is not tainted by water."
   },
   {
     "ref": "Yoga Sūtra 1.2",
@@ -126,10 +126,10 @@
     "eng": "He by whom the world is not troubled and who is not troubled by the world, free from elation, intolerance, fear, and anxiety — he is dear to Me."
   },
   {
-    "ref": "Bhagavad Gītā 13.32",
-    "dev": "यथा सर्वगतं सौक्ष्म्यादाकाशं नोपलिप्यते।\nसर्वत्रावस्थितो देहेषु नोपलिप्यति मोहितः॥",
-    "iast": "yathā sarva-gataṃ saukṣmyād ākāśaṃ nopalipyate\nsarvatrāvasthito deheṣu nopalipyati mohitaḥ",
-    "eng": "As space, present everywhere, is not stained by subtlety, so the Self, dwelling in all bodies, is not stained."
+    "ref": "Bhagavad Gītā 13.33",
+    "dev": "यथा सर्वगतं सौक्ष्म्यादाकाशं नोपलिप्यते।\nसर्वत्रावस्थितो देहे तथात्मा नोपलिप्यते॥",
+    "iast": "yathā sarva-gataṃ saukṣmyād ākāśaṃ nopalipyate\nsarvatrāvasthito dehe tathātmā nopalipyate",
+    "eng": "As all-pervading space is not tainted, because of its subtlety, so the Self, though present in every body, is not tainted."
   },
   {
     "ref": "Bhagavad Gītā 15.15",
@@ -162,10 +162,10 @@
     "eng": "I am the Self, O Guḍākeśa, seated in the hearts of all beings; I am the beginning, the middle, and the end of beings."
   },
   {
-    "ref": "Bhagavad Gītā 11.33",
-    "dev": "तस्मात्त्वमुत्तिष्ठ यशो लभस्व जित्वा शत्रून् भुङ्क्ष्व राज्यं समृद्धम्।\nमयैवैते निहताः पूर्वमेव निमित्तमात्रं भव सव्यसाचिन्॥",
-    "iast": "tasmāt tvam uttiṣṭha yaśo labhasva jitvā śatrūn bhuṅkṣva rājyaṃ samṛddham\nmayaivaite nihatāḥ pūrvam eva nimitta-mātraṃ bhava savya-sācin",
-    "eng": "Therefore arise, win fame, slay your foes, and enjoy a rich kingdom; these are already struck down by Me — be only My instrument, O archer."
+    "ref": "Bhagavad Gītā 6.29",
+    "dev": "सर्वभूतस्थमात्मानं सर्वभूतानि चात्मनि।\nईक्षते योगयुक्तात्मा सर्वत्र समदर्शनः॥",
+    "iast": "sarva-bhūta-stham ātmānaṃ sarva-bhūtāni cātmani\nīkṣate yoga-yuktātmā sarvatra sama-darśanaḥ",
+    "eng": "With the mind harmonized by yoga, one sees the Self abiding in all beings and all beings in the Self; one sees the same everywhere."
   },
   {
     "ref": "Bhagavad Gītā 16.21",

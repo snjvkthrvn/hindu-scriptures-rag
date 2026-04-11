@@ -41,8 +41,8 @@
     --chip-hover-text: #fff;
     --think-result: #065F46;
 
-    --font-display: 'Cinzel', serif;
-    --font-body: 'Alegreya', serif;
+    --font-display: 'Marcellus', serif;
+    --font-body: 'Literata', serif;
     --font-sanskrit: 'Noto Sans Devanagari', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
@@ -201,7 +201,7 @@ body::before {
 .header-title {
     font-family: var(--font-display);
     font-size: 0.95rem;
-    font-weight: 700;
+    font-weight: 400;
     letter-spacing: 0.05em;
     line-height: 1.2;
     white-space: nowrap;
@@ -241,6 +241,7 @@ body::before {
 }
 .header-btn {
     font-family: var(--font-display);
+    font-weight: 400;
     font-size: 0.62rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -502,6 +503,7 @@ body::before {
 .welcome-title {
     font-family: var(--font-display);
     font-size: 1.5rem;
+    font-weight: 400;
     color: var(--maroon);
     letter-spacing: 0.08em;
     animation: fadeUp 0.7s var(--ease-out-expo) both;
@@ -578,12 +580,12 @@ body::before {
 .welcome-verse-heading {
     font-family: var(--font-display);
     font-size: 0.72rem;
+    font-weight: 400;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--saffron);
     margin: 0;
     text-align: center;
-    font-weight: 600;
 }
 .welcome-verse-card {
     text-align: center;
@@ -686,7 +688,7 @@ body::before {
 }
 .msg-user { justify-content: flex-end; }
 .msg-assistant { justify-content: flex-start; }
-.msg-bubble { max-width: 88%; position: relative; }
+.msg-bubble { max-width: 88%; width: fit-content; position: relative; }
 
 /* User bubble */
 .msg-user .msg-bubble {
@@ -727,7 +729,7 @@ body::before {
     box-shadow: 0 2px 8px rgba(232, 130, 12, 0.25);
     margin-top: 2px;
 }
-.msg-body { flex: 1; min-width: 0; }
+.msg-body { min-width: 0; }
 .msg-content {
     background: var(--msg-assist-bg);
     border: 1px solid var(--border);
@@ -737,7 +739,7 @@ body::before {
     font-size: 1rem;
     line-height: 1.75;
     overflow-wrap: break-word;
-    max-width: 72ch;
+    max-width: 56ch;
 }
 
 /* Content typography */
@@ -748,6 +750,7 @@ body::before {
 
 .msg-content .md-h3 {
     font-family: var(--font-display);
+    font-weight: 400;
     font-size: 1.05rem;
     color: var(--maroon);
     margin: 1rem 0 0.5rem;
@@ -755,10 +758,17 @@ body::before {
 }
 .msg-content .md-h4 {
     font-family: var(--font-display);
+    font-weight: 400;
     font-size: 0.95rem;
     color: var(--maroon-deep);
     margin: 0.75rem 0 0.4rem;
     letter-spacing: 0.02em;
+}
+.msg-content .md-h3 strong,
+.msg-content .md-h3 b,
+.msg-content .md-h4 strong,
+.msg-content .md-h4 b {
+    font-weight: 400;
 }
 .msg-content .md-list {
     list-style: none;
@@ -823,13 +833,14 @@ body::before {
     font-size: 2.8rem;
     color: var(--gold);
     opacity: 0.2;
-    font-family: 'Cinzel', Georgia, serif;
+    font-family: var(--font-display);
     line-height: 1;
 }
 .msg-content .verse-quote strong {
     color: var(--maroon);
     font-family: var(--font-display);
     font-size: 0.8rem;
+    font-weight: 400;
     font-style: normal;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -1025,6 +1036,7 @@ body::before {
 .source-cards[open] { box-shadow: var(--shadow-sm); }
 .source-cards summary {
     font-family: var(--font-display);
+    font-weight: 400;
     font-size: 0.76rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -1208,7 +1220,7 @@ body::before {
     .theme-toggle { width: 44px; height: 44px; font-size: 1rem; }
 
     .chat-messages { padding: 1rem var(--shell-inline) 0.85rem; }
-    .msg-bubble { max-width: 95%; }
+    .msg-bubble { max-width: 95%; width: fit-content; }
     .msg-content { padding: 0.8rem 0.9rem; font-size: 0.95rem; max-width: none; }
     .msg-avatar { width: 28px; height: 28px; font-size: 0.95rem; }
 
@@ -1370,6 +1382,7 @@ body::before {
     padding: 0.7rem 1rem;
     box-sizing: border-box;
     font-family: var(--font-display);
+    font-weight: 400;
     font-size: 0.85rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
