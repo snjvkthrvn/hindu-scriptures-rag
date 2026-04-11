@@ -609,6 +609,7 @@ body::before {
     line-height: 1.55;
     color: var(--text);
     margin-bottom: 0.35rem;
+    white-space: pre-line;
 }
 .welcome-verse-iast {
     font-size: 0.88rem;
@@ -616,12 +617,14 @@ body::before {
     color: var(--text-light);
     line-height: 1.45;
     margin-bottom: 0.4rem;
+    white-space: pre-line;
 }
 .welcome-verse-eng {
     font-size: 0.95rem;
     color: var(--text);
     line-height: 1.55;
     margin: 0;
+    white-space: pre-line;
 }
 .verse-cta-row {
     display: flex;
