@@ -181,8 +181,10 @@
         credentials: "same-origin",
         headers: csrfHeaders(),
         body: "{}",
-      }).then(function () {
-        window.location.href = RAG_PREFIX ? RAG_PREFIX + "/" : "/";
+      }).then(function (res) {
+        if (res.ok) {
+          window.location.href = RAG_PREFIX ? RAG_PREFIX + "/" : "/";
+        }
       });
     });
   }

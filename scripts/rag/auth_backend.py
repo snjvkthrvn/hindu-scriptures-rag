@@ -27,8 +27,9 @@ from config import PROJECT_ROOT
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, session, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_wtf.csrf import CSRFError, CSRFProtect, validate_csrf
+from flask_wtf.csrf import CSRFProtect, validate_csrf
 from werkzeug.security import check_password_hash, generate_password_hash
+from wtforms import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -503,8 +504,8 @@ def login():
             next_url = _safe_redirect_target(data.get("next") or "/")
         else:
             try:
-                validate_csrf()
-            except CSRFError:
+                validate_csrf(csrf._get_csrf_token())
+            except ValidationError:
                 next_url = _safe_redirect_target(
                     request.form.get("next") or request.args.get("next") or "/",
                 )
@@ -578,8 +579,8 @@ def login():
 def logout():
     if request.method == "POST":
         try:
-            validate_csrf()
-        except CSRFError:
+            validate_csrf(csrf._get_csrf_token())
+        except ValidationError:
             if request.is_json:
                 return jsonify({"error": "csrf"}), 403
             abort(403)
@@ -616,8 +617,8 @@ def register():
         )
 
     try:
-        validate_csrf()
-    except CSRFError:
+        validate_csrf(csrf._get_csrf_token())
+    except ValidationError:
         next_url = _safe_redirect_target(request.form.get("next") or "/")
         return (
             render_template(
