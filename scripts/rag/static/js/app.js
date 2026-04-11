@@ -49,6 +49,44 @@
   let abortController = null;
   let currentVoice = localStorage.getItem("hs-voice") || "elder";
 
+  function isLegacyPwaWorker(registration) {
+    var worker =
+      registration.active || registration.waiting || registration.installing;
+    if (!worker || !worker.scriptURL) return false;
+    try {
+      return new URL(worker.scriptURL).pathname === "/static/sw.js";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Retire the previous PWA setup so existing browsers stop treating this as
+  // an installable app and drop any stale offline shell caches.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .getRegistrations()
+      .then(function (registrations) {
+        registrations.forEach(function (registration) {
+          if (isLegacyPwaWorker(registration)) {
+            registration.unregister();
+          }
+        });
+      })
+      .catch(function () {});
+  }
+  if ("caches" in window) {
+    caches
+      .keys()
+      .then(function (keys) {
+        keys.forEach(function (key) {
+          if (/^hs-rag-/.test(key)) {
+            caches.delete(key);
+          }
+        });
+      })
+      .catch(function () {});
+  }
+
   /* ====================================================================
      Theme
      ==================================================================== */
