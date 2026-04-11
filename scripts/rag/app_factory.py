@@ -1,0 +1,343 @@
+"""Shared Flask application factory for the RAG web UI.
+
+- ``create_full_app``: full corpus only at ``/`` (replaces standalone ``scripts/rag/app.py``).
+- ``create_dual_app``: English at ``/``, full corpus at ``/main`` (production / Railway).
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+import secrets
+import sys
+import threading
+from dataclasses import replace
+from pathlib import Path
+from types import ModuleType
+
+from auth_backend import register_auth
+from config import PROJECT_ROOT, RAGConfig
+from flask import Blueprint, Flask, Response, jsonify, render_template, request, stream_with_context
+from voices import VOICES
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+
+def _build_sources_response(result):
+    sources = []
+    total_sources = max(len(result.get("sources", [])), 1)
+    for i, src in enumerate(result.get("sources", [])):
+        header = src.get("source_text", "")
+        if src.get("chapter_name"):
+            header += f" - {src['chapter_name']}"
+        if src.get("verse_num"):
+            header += f", Verse {src['verse_num']}"
+        similarity = round((1 - (i / total_sources)) * 100, 1)
+        sources.append(
+            {
+                "header": header,
+                "sanskrit": src.get("sanskrit", ""),
+                "transliteration": src.get("transliteration", ""),
+                "translation": src.get("translation", ""),
+                "commentary_text": src.get("commentary_text", ""),
+                "author": src.get("author", ""),
+                "chunk_type": src.get("chunk_type", "verse"),
+                "metadata": {
+                    "source_text": src.get("source_text", ""),
+                    "category": src.get("category", ""),
+                    "tradition": src.get("tradition", ""),
+                    "chapter": src.get("chapter", 0),
+                    "verse": src.get("verse_num", 0),
+                },
+                "similarity": similarity,
+            }
+        )
+    return sources
+
+
+def _call_warmup(config: RAGConfig) -> None:
+    from search import warmup
+
+    warmup(config)
+
+
+def _load_module(module_name: str, path: Path) -> ModuleType:
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load module {module_name} from {path}")
+
+    module = importlib.util.module_from_spec(spec)
+    preferred_dir = str(path.parent.parent if path.parent.name == "agent" else path.parent)
+    original_sys_path = list(sys.path)
+    sys.path = [preferred_dir] + [entry for entry in sys.path if entry != preferred_dir]
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path = original_sys_path
+    return module
+
+
+def _load_module_attr(module_name: str, path: Path, attr_name: str):
+    module = _load_module(module_name, path)
+    return getattr(module, attr_name)
+
+
+def _register_rag_routes(
+    bp_or_app,
+    base_config,
+    filter_options,
+    *,
+    query_func=None,
+    run_agent_func=None,
+    run_agent_stream_func=None,
+):
+    """Register /api/sources, /api/query, /api/agent, /api/agent/stream, /api/voices."""
+
+    if query_func is None:
+        from query import query_rag as query_func
+
+    if run_agent_func is None:
+        from agent.react_loop import run_agent as run_agent_func
+
+    if run_agent_stream_func is None:
+        from agent.react_loop import run_agent_stream as run_agent_stream_func
+
+    @bp_or_app.route("/api/sources")
+    def api_sources():
+        return jsonify(filter_options)
+
+    @bp_or_app.route("/api/query", methods=["POST"])
+    def api_query():
+        data = request.get_json(silent=True) or {}
+        question = (data.get("question") or "").strip()
+        if not question:
+            return jsonify({"error": "No question provided"}), 400
+
+        top_k = data.get("top_k", base_config.top_k)
+        try:
+            top_k = max(1, min(int(top_k), 20))
+        except (ValueError, TypeError):
+            top_k = base_config.top_k
+
+        config = replace(base_config, top_k=top_k)
+
+        filters = data.get("filters") or {}
+        filter_dict = {}
+        if filters.get("source"):
+            filter_dict["source_text"] = filters["source"]
+        if filters.get("category"):
+            filter_dict["category"] = filters["category"]
+        if filters.get("tradition"):
+            filter_dict["tradition"] = filters["tradition"]
+
+        try:
+            result = query_func(question, config=config, filter_dict=filter_dict or None)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        response = {
+            "answer": result["answer"],
+            "sources": _build_sources_response(result),
+        }
+        if "retrieval_mode" in result:
+            response["retrieval_mode"] = result["retrieval_mode"]
+        return jsonify(response)
+
+    @bp_or_app.route("/api/agent", methods=["POST"])
+    def api_agent():
+        from agent.conversation import ConversationMemory
+
+        data = request.get_json(silent=True) or {}
+        question = (data.get("question") or "").strip()
+        history = data.get("history") or []
+        voice = (data.get("voice") or "").strip() or None
+        if not question:
+            return jsonify({"error": "No question provided"}), 400
+
+        config = replace(base_config)
+        memory = ConversationMemory(window=config.conversation_window)
+        for msg in history:
+            memory.add(msg.get("role", "user"), msg.get("content", ""))
+
+        try:
+            result = run_agent_func(question, config=config, memory=memory, voice=voice)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        return jsonify(result)
+
+    @bp_or_app.route("/api/agent/stream", methods=["POST"])
+    def api_agent_stream():
+        data = request.get_json(silent=True) or {}
+        question = (data.get("question") or "").strip()
+        history = data.get("history") or []
+        voice = (data.get("voice") or "").strip() or None
+        if not question:
+            return jsonify({"error": "No question provided"}), 400
+
+        config = replace(base_config)
+
+        def event_stream():
+            try:
+                for event in run_agent_stream_func(
+                    question,
+                    config=config,
+                    history=history,
+                    voice=voice,
+                ):
+                    yield f"data: {json.dumps(event)}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+
+        return Response(
+            stream_with_context(event_stream()),
+            mimetype="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    @bp_or_app.route("/api/voices")
+    def api_voices():
+        return jsonify(
+            {
+                key: {"name": v["name"], "is_default": v.get("is_default", False)}
+                for key, v in VOICES.items()
+            }
+        )
+
+
+def _register_warmup(app, config: RAGConfig) -> None:
+    def _warmup_rag():
+        if os.environ.get("RAG_WARMUP", "1") != "1":
+            return
+        try:
+            _call_warmup(config)
+        except Exception:
+            pass
+
+    if os.environ.get("RAG_WARMUP", "1") == "1":
+        threading.Thread(target=_warmup_rag, daemon=True).start()
+
+
+def _register_dual_warmup(app, english_config: RAGConfig, full_config: RAGConfig) -> None:
+    def _warmup_both():
+        if os.environ.get("RAG_WARMUP", "1") != "1":
+            return
+        for config in (english_config, full_config):
+            try:
+                _call_warmup(config)
+            except Exception:
+                pass
+
+    if os.environ.get("RAG_WARMUP", "1") == "1":
+        threading.Thread(target=_warmup_both, daemon=True).start()
+
+
+def create_full_app() -> Flask:
+    """Single corpus (full) at ``/`` — same behavior as legacy ``scripts/rag/app.py``."""
+    rag_root = PROJECT_ROOT / "scripts" / "rag"
+    app = Flask(
+        __name__,
+        template_folder=str(rag_root / "templates"),
+        static_folder=str(rag_root / "static"),
+        static_url_path="/static",
+    )
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
+    app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+    register_auth(app)
+
+    metadata_path = PROJECT_ROOT / "final" / "metadata.json"
+    try:
+        with open(metadata_path) as f:
+            corpus_meta = json.load(f)
+    except FileNotFoundError:
+        corpus_meta = {}
+
+    filter_options = {
+        "sources": sorted(corpus_meta.get("by_source", {}).keys()),
+        "categories": sorted(corpus_meta.get("by_category", {}).keys()),
+        "traditions": sorted(corpus_meta.get("by_tradition", {}).keys()),
+        "total_verses": corpus_meta.get("total_verses", 0),
+    }
+
+    base_config = RAGConfig()
+
+    @app.route("/")
+    def index():
+        return render_template("index.html", api_base="")
+
+    _register_rag_routes(app, base_config, filter_options)
+    _register_warmup(app, base_config)
+    return app
+
+
+def create_dual_app(english_config: RAGConfig, english_filters: dict) -> Flask:
+    """English corpus at ``/``, full corpus at ``/main`` (templates/static under ``english-v1-rag``)."""
+    eng_root = PROJECT_ROOT / "english-v1-rag"
+    app = Flask(
+        __name__,
+        template_folder=str(eng_root / "templates"),
+        static_folder=str(eng_root / "static"),
+        static_url_path="/static",
+    )
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
+    app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+    register_auth(app)
+
+    @app.route("/")
+    def index():
+        return render_template("index.html", api_base="")
+
+    _register_rag_routes(app, english_config, english_filters)
+
+    main_templates = PROJECT_ROOT / "scripts" / "rag" / "templates"
+    main_static = PROJECT_ROOT / "scripts" / "rag" / "static"
+
+    main_bp = Blueprint(
+        "main",
+        __name__,
+        url_prefix="/main",
+        template_folder=str(main_templates),
+        static_folder=str(main_static),
+        static_url_path="/static",
+    )
+
+    metadata_path = PROJECT_ROOT / "final" / "metadata.json"
+    try:
+        with open(metadata_path) as f:
+            corpus_meta = json.load(f)
+    except FileNotFoundError:
+        corpus_meta = {}
+
+    main_filters = {
+        "sources": sorted(corpus_meta.get("by_source", {}).keys()),
+        "categories": sorted(corpus_meta.get("by_category", {}).keys()),
+        "traditions": sorted(corpus_meta.get("by_tradition", {}).keys()),
+        "total_verses": corpus_meta.get("total_verses", 0),
+    }
+    main_config = RAGConfig()
+    full_query_func = _load_module_attr(
+        "_full_query_module",
+        PROJECT_ROOT / "scripts" / "rag" / "query.py",
+        "query_rag",
+    )
+    full_agent_module = _load_module(
+        "_full_agent_module",
+        PROJECT_ROOT / "scripts" / "rag" / "agent" / "react_loop.py",
+    )
+    full_run_agent_func = full_agent_module.run_agent
+    full_run_agent_stream_func = full_agent_module.run_agent_stream
+
+    @main_bp.route("/")
+    def main_index():
+        return render_template("index.html", api_base="/main")
+
+    _register_rag_routes(
+        main_bp,
+        main_config,
+        main_filters,
+        query_func=full_query_func,
+        run_agent_func=full_run_agent_func,
+        run_agent_stream_func=full_run_agent_stream_func,
+    )
+    app.register_blueprint(main_bp)
+
+    _register_dual_warmup(app, english_config, main_config)
+    return app

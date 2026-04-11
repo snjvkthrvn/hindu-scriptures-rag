@@ -61,7 +61,30 @@ The chat servers depend on **`requirements-rag.txt`** (Flask, Qdrant, Cohere, An
 | Full corpus (standalone) | `python scripts/rag/app.py` | 5001 |
 | English + full corpus at `/main` | `python english-v1-rag/app.py` | 5002 |
 
+Shared Flask logic lives in **`scripts/rag/app_factory.py`** (`create_dual_app` for production, `create_full_app` for full-corpus-only dev). `english-v1-rag/app.py` and `scripts/rag/app.py` are thin entrypoints.
+
 `docker compose` runs the English app on **5002** (`docker-compose.yml`). Copy **`.env.example`** to `.env` and set API keys (and optional auth variables).
+
+### Planned Hybrid RAG Fusion
+
+Approved design direction for combining the English-first and full-corpus RAGs:
+
+- Keep the **two existing corpora and collections**. Do **not** reindex into one unified collection.
+- Add a **rule-based hybrid router** above `search()`:
+  - full-corpus verse refs, Devanagari, Sanskrit/transliteration, commentary/school/compare/original/story signals route to the **full** corpus
+  - Yoga Sūtra refs stay **English-first** unless another full-corpus signal is present
+  - broad plain-English questions default to the **English** corpus
+  - weak first-pass evidence escalates to **both**
+- Add two shared modules in `scripts/rag/`:
+  - `hybrid_router.py` for routing and escalation
+  - `hybrid_query.py` for parallel retrieval, normalization, fusion, and fallback behavior
+- When both corpora are queried:
+  - deduplicate by stable keys like `verse_id + chunk_type + author`
+  - use **corpus-level Reciprocal Rank Fusion (RRF)**, not raw score comparison
+  - cap the merged evidence at `config.top_k` after fusion
+- In the agent tool path, make only `search_scriptures` and `search_commentaries` hybrid-aware. Keep `get_verse`, `compare_schools`, and `search_story` on the precise single-corpus/full path.
+- Warm **both corpora** on startup in the background so both vector stores and BM25 encoders are ready for hybrid traffic.
+- Phase 1 is **backend-only**: one answer, one merged source list, no required UI change. Phase 2 may add visible corpus diagnostics if useful.
 
 ### Welcome screen — Option B (verse card + prompts)
 

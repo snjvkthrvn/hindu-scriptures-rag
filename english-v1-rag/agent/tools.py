@@ -4,6 +4,7 @@ Adapted from scripts/rag/agent/tools.py with English corpus source aliases,
 tool descriptions, and additional verse reference patterns (YS, MBh section).
 """
 
+from dataclasses import replace
 import re
 import sys
 from pathlib import Path
@@ -14,7 +15,9 @@ if str(_rag_dir) not in sys.path:
     sys.path.insert(0, str(_rag_dir))
 
 from config import RAGConfig
-from search import format_context, search, search_by_verse_id, search_with_context_expansion
+from english_config import get_english_config, get_full_corpus_config
+from hybrid_query import hybrid_search
+from search import format_context, search_by_verse_id, search_with_context_expansion
 
 # ── Source name aliases → canonical names (as in verses_english_only.json) ──
 
@@ -395,7 +398,14 @@ def _exec_search_scriptures(input_data: dict, config: RAGConfig) -> str:
         filters["chunk_type"] = input_data["chunk_type"]
 
     top_k = min(input_data.get("top_k", 8), 20)
-    results = search(query, config=config, filters=filters, top_k=top_k)
+    english_config = replace(config or get_english_config(), top_k=top_k)
+    full_config = get_full_corpus_config(config, top_k=top_k)
+    results, _retrieval_mode = hybrid_search(
+        query,
+        english_config=english_config,
+        full_config=full_config,
+        filter_dict=filters or None,
+    )
 
     if not results:
         return "No verses found matching your query."
@@ -415,7 +425,14 @@ def _exec_search_commentaries(input_data: dict, config: RAGConfig) -> str:
         filters["author"] = input_data["author"]
 
     top_k = min(input_data.get("top_k", 10), 20)
-    results = search(query, config=config, filters=filters, top_k=top_k)
+    english_config = replace(config or get_english_config(), top_k=top_k)
+    full_config = get_full_corpus_config(config, top_k=top_k)
+    results, _retrieval_mode = hybrid_search(
+        query,
+        english_config=english_config,
+        full_config=full_config,
+        filter_dict=filters or None,
+    )
 
     if not results:
         return "No commentaries found matching your query."

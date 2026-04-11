@@ -3,13 +3,13 @@
 Same pipeline as scripts/rag/query.py but uses local English prompts.
 """
 
-# english_config sets up sys.path (eng_dir first, then rag_dir)
 import llm as llm_module
 from config import LLMProvider, RAGConfig
+from hybrid_query import hybrid_search
 from sanskrit_gloss import augment_context_with_sanskrit_gloss
-from search import format_context, search
+from search import format_context
 
-from english_config import get_english_config  # noqa: F401 — side-effect: path setup
+from english_config import get_english_config, get_full_corpus_config  # noqa: F401 — side-effect: path setup
 from prompt_templates import QUERY_PROMPT_TEMPLATE, SYSTEM_PROMPT
 
 
@@ -22,12 +22,19 @@ def query_rag(
     if config is None:
         config = get_english_config()
 
-    results = search(question, config=config, filters=filter_dict)
+    full_search_config = get_full_corpus_config(config, top_k=config.top_k)
+    results, retrieval_mode = hybrid_search(
+        question,
+        english_config=config,
+        full_config=full_search_config,
+        filter_dict=filter_dict,
+    )
 
     if not results:
         return {
             "answer": "No relevant scripture passages were found for your question.",
             "sources": [],
+            "retrieval_mode": retrieval_mode,
         }
 
     context = format_context(results)
@@ -62,4 +69,5 @@ def query_rag(
     return {
         "answer": answer,
         "sources": results,
+        "retrieval_mode": retrieval_mode,
     }

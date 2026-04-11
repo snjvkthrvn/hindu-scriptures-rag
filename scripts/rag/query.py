@@ -21,14 +21,14 @@ def query_rag(
     config: RAGConfig | None = None,
     filter_dict: dict | None = None,
 ) -> dict:
-    """Full RAG pipeline: hybrid search → format prompt → Claude → answer + sources.
+    """Full RAG pipeline: single-corpus search → format prompt → Claude → answer + sources.
 
     Returns dict with keys: answer, sources.
     """
     if config is None:
         config = RAGConfig()
 
-    # Retrieve via hybrid search
+    # Retrieve from the full corpus only; the English app adds cross-corpus routing above this.
     results = search(question, config=config, filters=filter_dict)
 
     if not results:
