@@ -1504,3 +1504,27 @@ body::before {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* Session login (RAG_SESSION_PASSWORD) */
+.login-bar {
+    width: 100%;
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: 0.5rem 1rem;
+    background: var(--maroon);
+    color: var(--parchment);
+    font-size: 0.9rem;
+}
+.login-bar[hidden] { display: none !important; }
+.login-form { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.login-label { font-family: var(--font-display); font-size: 0.8rem; opacity: 0.9; }
+.login-form input[type="password"] {
+    flex: 1;
+    min-width: 8rem;
+    max-width: 16rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 0.9rem;
+}
+.login-error { color: #ffc9c9; font-size: 0.85rem; }

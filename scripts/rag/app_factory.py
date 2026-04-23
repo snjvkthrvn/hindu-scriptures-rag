@@ -16,9 +16,21 @@ from dataclasses import replace
 from pathlib import Path
 from types import ModuleType
 
+import secrets as secrets_mod
+
 from auth_backend import register_auth
 from config import PROJECT_ROOT, RAGConfig
-from flask import Blueprint, Flask, Response, jsonify, render_template, request, stream_with_context
+from api_security import (
+    UserInputError,
+    build_json_error,
+    get_required_api_key,
+    get_session_password,
+    is_browser_key_exposure_enabled,
+    load_history_into_memory,
+    auth_allows_request,
+    validate_and_prepare_question,
+)
+from flask import Blueprint, Flask, Response, current_app, jsonify, render_template, request, session, stream_with_context
 from voices import VOICES
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -102,6 +114,40 @@ def _register_rag_routes(
     if run_agent_stream_func is None:
         from agent.react_loop import run_agent_stream as run_agent_stream_func
 
+    @bp_or_app.route("/api/health")
+    def api_health():
+        return jsonify({"ok": True})
+
+    @bp_or_app.route("/api/auth/config", methods=["GET"])
+    def api_rag_auth_config():
+        k = get_required_api_key()
+        return jsonify(
+            {
+                "api_key_configured": bool(k),
+                "password_login_configured": bool(get_session_password()),
+                "expose_key_to_ui": bool(is_browser_key_exposure_enabled() and k),
+            }
+        )
+
+    @bp_or_app.route("/api/login", methods=["POST"])
+    def api_rag_password_login():
+        expected = get_session_password()
+        if not expected:
+            return jsonify({"error": "Session password login is not enabled"}), 400
+        data = request.get_json(silent=True) or {}
+        got = data.get("password") or ""
+        if len(got) != len(expected):
+            return jsonify({"error": "Invalid credentials"}), 401
+        if not secrets_mod.compare_digest(got, expected):
+            return jsonify({"error": "Invalid credentials"}), 401
+        session["rag_ok"] = True
+        return jsonify({"ok": True})
+
+    @bp_or_app.route("/api/logout", methods=["POST"])
+    def api_rag_logout():
+        session.pop("rag_ok", None)
+        return jsonify({"ok": True})
+
     @bp_or_app.route("/api/sources")
     def api_sources():
         return jsonify(filter_options)
@@ -132,8 +178,10 @@ def _register_rag_routes(
 
         try:
             result = query_func(question, config=config, filter_dict=filter_dict or None)
+        except UserInputError as e:
+            return jsonify({"error": str(e)}), 400
         except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            return build_json_error("Request could not be completed", 500, e)
         response = {
             "answer": result["answer"],
             "sources": _build_sources_response(result),
@@ -155,13 +203,16 @@ def _register_rag_routes(
 
         config = replace(base_config)
         memory = ConversationMemory(window=config.conversation_window)
-        for msg in history:
-            memory.add(msg.get("role", "user"), msg.get("content", ""))
+        try:
+            load_history_into_memory(memory, history, config)
+            question = validate_and_prepare_question(question, config)
+        except UserInputError as e:
+            return jsonify({"error": str(e)}), 400
 
         try:
             result = run_agent_func(question, config=config, memory=memory, voice=voice)
         except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            return build_json_error("Request could not be completed", 500, e)
         return jsonify(result)
 
     @bp_or_app.route("/api/agent/stream", methods=["POST"])
@@ -174,18 +225,24 @@ def _register_rag_routes(
             return jsonify({"error": "No question provided"}), 400
 
         config = replace(base_config)
+        try:
+            q = validate_and_prepare_question(question, config)
+        except UserInputError as e:
+            return jsonify({"error": str(e)}), 400
 
         def event_stream():
             try:
                 for event in run_agent_stream_func(
-                    question,
+                    q,
                     config=config,
                     history=history,
                     voice=voice,
                 ):
                     yield f"data: {json.dumps(event)}\n\n"
             except Exception as e:
-                yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+                current_app.logger.exception("agent stream failed")
+                msg = "Request failed" if not current_app.debug else f"Request failed: {type(e).__name__}"
+                yield f"data: {json.dumps({'type': 'error', 'content': msg})}\n\n"
 
         return Response(
             stream_with_context(event_stream()),
@@ -230,6 +287,74 @@ def _register_dual_warmup(app, english_config: RAGConfig, full_config: RAGConfig
         threading.Thread(target=_warmup_both, daemon=True).start()
 
 
+def _rag_api_relpath(path: str) -> str | None:
+    """Map ``/api/...`` and blueprint ``/main/api/...`` to the same ``/api/...`` key."""
+
+    if not path:
+        return None
+    if path.startswith("/main/api/"):
+        return "/api/" + path[len("/main/api/") :]
+    if path.startswith("/api/"):
+        return path
+    return None
+
+
+def _register_rag_api_key_gate(app: Flask) -> None:
+    """Optional RAG_API_KEY / RAG_SESSION_PASSWORD, or session user_id (SQLite auth)."""
+
+    @app.before_request
+    def _rag_api_key_gate():
+        path = _rag_api_relpath(request.path or "")
+        if path is None:
+            return
+        if path in (
+            "/api/health",
+            "/api/auth/config",
+            "/api/auth/me",
+            "/api/auth/status",
+            "/api/login",
+            "/api/logout",
+        ):
+            return
+        if not get_required_api_key() and not get_session_password():
+            return
+        ok, err = auth_allows_request(request, session)
+        if not ok:
+            return (
+                jsonify(
+                    {
+                        "error": err or "Unauthorized",
+                        "password_login_available": bool(get_session_password()),
+                    }
+                ),
+                401,
+            )
+        return None
+
+
+def _apply_cors_and_limits(app: Flask) -> None:
+    app.config["MAX_CONTENT_LENGTH"] = int(
+        os.environ.get("RAG_MAX_BODY_BYTES", str(2 * 1024 * 1024))
+    )
+    cors_raw = (os.environ.get("CORS_ORIGINS") or "").strip()
+    if cors_raw and cors_raw != "*":
+        try:
+            from flask_cors import CORS
+        except ImportError:
+            return
+        origins = [o.strip() for o in cors_raw.split(",") if o.strip()]
+        if origins:
+            CORS(
+                app,
+                resources={
+                    r"/api/*": {"origins": origins},
+                    r"/main/api/*": {"origins": origins},
+                },
+                supports_credentials=True,
+                allow_headers=["Content-Type", "Authorization", "X-API-Key", "X-CSRFToken"],
+            )
+
+
 def create_full_app() -> Flask:
     """Single corpus (full) at ``/`` — same behavior as legacy ``scripts/rag/app.py``."""
     rag_root = PROJECT_ROOT / "scripts" / "rag"
@@ -241,7 +366,9 @@ def create_full_app() -> Flask:
     )
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
     app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+    _apply_cors_and_limits(app)
     register_auth(app)
+    _register_rag_api_key_gate(app)
 
     metadata_path = PROJECT_ROOT / "final" / "metadata.json"
     try:
@@ -259,9 +386,17 @@ def create_full_app() -> Flask:
 
     base_config = RAGConfig()
 
+    k = get_required_api_key()
+    show_key = k if (is_browser_key_exposure_enabled() and k) else None
+
     @app.route("/")
     def index():
-        return render_template("index.html", api_base="")
+        return render_template(
+            "index.html",
+            api_base="",
+            browser_api_key=show_key,
+            session_login_enabled=bool(get_session_password()),
+        )
 
     _register_rag_routes(app, base_config, filter_options)
     _register_warmup(app, base_config)
@@ -279,7 +414,9 @@ def create_dual_app(english_config: RAGConfig, english_filters: dict) -> Flask:
     )
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
     app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+    _apply_cors_and_limits(app)
     register_auth(app)
+    _register_rag_api_key_gate(app)
 
     @app.route("/")
     def index():

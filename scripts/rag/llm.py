@@ -4,10 +4,28 @@ Supports:
   - Simple question answering (generate)
   - Tool use for the agentic layer (generate_with_tools)
   - Streaming responses
+Optional: RAG_ANTHROPIC_REQUEST_METADATA (JSON) merged into every messages.create / stream.
 """
+
+import json
+import os
 
 import anthropic
 from config import RAGConfig
+
+
+def _anthropic_extras() -> dict:
+    """Request-level options supported by the Anthropic API (e.g. metadata for org auditing)."""
+    raw = (os.environ.get("RAG_ANTHROPIC_REQUEST_METADATA") or "").strip()
+    if not raw:
+        return {}
+    try:
+        meta = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(meta, dict):
+        return {}
+    return {"metadata": meta}
 
 
 def get_client(config: RAGConfig | None = None) -> anthropic.Anthropic:
@@ -44,6 +62,7 @@ def generate(
         temperature=config.temperature,
         system=system,
         messages=messages,
+        **_anthropic_extras(),
     )
 
     # Extract text from content blocks
@@ -97,6 +116,7 @@ def generate_with_tools(
         system=system,
         messages=messages,
         tools=tools,
+        **_anthropic_extras(),
     )
 
 
@@ -122,5 +142,6 @@ def generate_stream(
         temperature=config.temperature,
         system=system,
         messages=messages,
+        **_anthropic_extras(),
     ) as stream:
         yield from stream.text_stream

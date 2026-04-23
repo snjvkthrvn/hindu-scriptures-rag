@@ -86,3 +86,18 @@ class RAGConfig:
 
     # --- API timeouts (prevent indefinite hangs) ---
     api_timeout_sec: float = 90
+    # --- API / content bounds (abuse and prompt-injection DoS) ---
+    max_question_len: int = field(
+        default_factory=lambda: int(os.environ.get("RAG_MAX_QUESTION_LEN", "8000"))
+    )
+    max_client_history_messages: int = field(
+        default_factory=lambda: int(os.environ.get("RAG_MAX_CLIENT_HISTORY_MSGS", "20"))
+    )
+
+    # --- LLM / moderation (see moderation.py) ---
+    llm_moderation_enabled: bool = field(
+        default_factory=lambda: os.environ.get("RAG_LLM_MODERATION", "").lower() in ("1", "true", "yes")
+    )
+    openai_moderation_enabled: bool = field(
+        default_factory=lambda: os.environ.get("RAG_OPENAI_MODERATION", "").lower() in ("1", "true", "yes")
+    )

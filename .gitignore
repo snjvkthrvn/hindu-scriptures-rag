@@ -66,6 +66,7 @@ venv/
 *.temp
 .cache/
 *.log
+npm-cache/
 
 # Jupyter notebooks
 .ipynb_checkpoints/
@@ -96,3 +97,6 @@ Desktop.ini
 *.bak
 *.backup
 *~
+
+# Local scratch
+scripts/rag/_remote_prompts.txt

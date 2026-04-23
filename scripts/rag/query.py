@@ -9,11 +9,17 @@ Usage:
 """
 
 import llm as llm_module
-from config import LLMProvider, RAGConfig
+from config import RAGConfig, LLMProvider
 from sanskrit_gloss import augment_context_with_sanskrit_gloss
 from search import format_context, search
 
 from prompt_templates import QUERY_PROMPT_TEMPLATE, SYSTEM_PROMPT
+from api_security import validate_and_prepare_question, wrap_untrusted_user_text
+from moderation import (
+    check_openai_user_moderation,
+    check_openai_output_moderation,
+    finalize_model_output,
+)
 
 
 def query_rag(
@@ -28,6 +34,9 @@ def query_rag(
     if config is None:
         config = RAGConfig()
 
+    question = validate_and_prepare_question(question, config)
+    check_openai_user_moderation(question, config)
+
     # Retrieve from the full corpus only; the English app adds cross-corpus routing above this.
     results = search(question, config=config, filters=filter_dict)
 
@@ -40,7 +49,8 @@ def query_rag(
     # Format prompt; Haiku pre-pass for Devanagari reading aids, then main model for the answer
     context = format_context(results)
     context = augment_context_with_sanskrit_gloss(context, results, question, config)
-    user_prompt = QUERY_PROMPT_TEMPLATE.format(context=context, question=question)
+    user_block = wrap_untrusted_user_text(question)
+    user_prompt = QUERY_PROMPT_TEMPLATE.format(context=context, user_message=user_block)
 
     # Call LLM
     if config.llm_provider == LLMProvider.ANTHROPIC:
@@ -50,7 +60,6 @@ def query_rag(
             config=config,
         )
     elif config.llm_provider == LLMProvider.OLLAMA:
-        # Fallback to Ollama via LangChain
         from langchain_core.messages import HumanMessage, SystemMessage
         from langchain_ollama import ChatOllama
 
@@ -82,6 +91,11 @@ def query_rag(
         answer = resp.choices[0].message.content
     else:
         raise ValueError(f"Unsupported LLM provider: {config.llm_provider}")
+
+    answer = answer or ""
+    if config.llm_provider == LLMProvider.OPENAI:
+        answer = check_openai_output_moderation(answer, config)
+    answer = finalize_model_output(answer, config)
 
     return {
         "answer": answer,

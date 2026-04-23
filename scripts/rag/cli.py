@@ -13,6 +13,7 @@ Commands:
     /quit                           - Exit
 """
 
+from api_security import UserInputError
 from config import RAGConfig
 
 from query import query_rag
@@ -117,6 +118,9 @@ def main():
                 from agent.react_loop import run_agent
 
                 result = run_agent(user_input, config=config)
+            except UserInputError as e:
+                print(f"\nInvalid input: {e}")
+                continue
             except Exception as e:
                 print(f"\nError: {e}")
                 continue
@@ -132,6 +136,9 @@ def main():
             print("\nSearching scriptures...")
             try:
                 result = query_rag(user_input, config, filter_dict if filter_dict else None)
+            except UserInputError as e:
+                print(f"\nInvalid input: {e}")
+                continue
             except Exception as e:
                 print(f"\nError: {e}")
                 continue
