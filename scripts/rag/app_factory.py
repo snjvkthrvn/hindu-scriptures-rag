@@ -1,7 +1,7 @@
 """Shared Flask application factory for the RAG web UI.
 
 - ``create_full_app``: full corpus only at ``/`` (replaces standalone ``scripts/rag/app.py``).
-- ``create_dual_app``: English at ``/``, full corpus at ``/main`` (production / Railway).
+- ``create_dual_app``: full multilingual corpus at ``/``, English beta at ``/beta`` (production / Railway).
 """
 
 from __future__ import annotations
@@ -288,12 +288,12 @@ def _register_dual_warmup(app, english_config: RAGConfig, full_config: RAGConfig
 
 
 def _rag_api_relpath(path: str) -> str | None:
-    """Map ``/api/...`` and blueprint ``/main/api/...`` to the same ``/api/...`` key."""
+    """Map ``/api/...`` and blueprint ``/beta/api/...`` to the same ``/api/...`` key."""
 
     if not path:
         return None
-    if path.startswith("/main/api/"):
-        return "/api/" + path[len("/main/api/") :]
+    if path.startswith("/beta/api/"):
+        return "/api/" + path[len("/beta/api/") :]
     if path.startswith("/api/"):
         return path
     return None
@@ -348,7 +348,7 @@ def _apply_cors_and_limits(app: Flask) -> None:
                 app,
                 resources={
                     r"/api/*": {"origins": origins},
-                    r"/main/api/*": {"origins": origins},
+                    r"/beta/api/*": {"origins": origins},
                 },
                 supports_credentials=True,
                 allow_headers=["Content-Type", "Authorization", "X-API-Key", "X-CSRFToken"],
@@ -404,12 +404,19 @@ def create_full_app() -> Flask:
 
 
 def create_dual_app(english_config: RAGConfig, english_filters: dict) -> Flask:
-    """English corpus at ``/``, full corpus at ``/main`` (templates/static under ``english-v1-rag``)."""
+    """Full multilingual corpus at ``/``, English beta at ``/beta``.
+
+    The Flask app's template/static folders point at ``scripts/rag/`` (the main corpus).
+    English templates/static live on a blueprint mounted at ``/beta``; the English
+    template qualifies asset URLs with ``url_for('beta.static', ...)`` so they load
+    from the blueprint's static folder rather than the app's.
+    """
+    rag_root = PROJECT_ROOT / "scripts" / "rag"
     eng_root = PROJECT_ROOT / "english-v1-rag"
     app = Flask(
         __name__,
-        template_folder=str(eng_root / "templates"),
-        static_folder=str(eng_root / "static"),
+        template_folder=str(rag_root / "templates"),
+        static_folder=str(rag_root / "static"),
         static_url_path="/static",
     )
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
@@ -417,24 +424,6 @@ def create_dual_app(english_config: RAGConfig, english_filters: dict) -> Flask:
     _apply_cors_and_limits(app)
     register_auth(app)
     _register_rag_api_key_gate(app)
-
-    @app.route("/")
-    def index():
-        return render_template("index.html", api_base="")
-
-    _register_rag_routes(app, english_config, english_filters)
-
-    main_templates = PROJECT_ROOT / "scripts" / "rag" / "templates"
-    main_static = PROJECT_ROOT / "scripts" / "rag" / "static"
-
-    main_bp = Blueprint(
-        "main",
-        __name__,
-        url_prefix="/main",
-        template_folder=str(main_templates),
-        static_folder=str(main_static),
-        static_url_path="/static",
-    )
 
     metadata_path = PROJECT_ROOT / "final" / "metadata.json"
     try:
@@ -450,31 +439,63 @@ def create_dual_app(english_config: RAGConfig, english_filters: dict) -> Flask:
         "total_verses": corpus_meta.get("total_verses", 0),
     }
     main_config = RAGConfig()
+
+    # english_config.py inserts english-v1-rag first on sys.path, so explicitly load
+    # the full-corpus query/agent modules from scripts/rag — otherwise `from query
+    # import query_rag` inside _register_rag_routes would resolve to the English one.
     full_query_func = _load_module_attr(
         "_full_query_module",
-        PROJECT_ROOT / "scripts" / "rag" / "query.py",
+        rag_root / "query.py",
         "query_rag",
     )
     full_agent_module = _load_module(
         "_full_agent_module",
-        PROJECT_ROOT / "scripts" / "rag" / "agent" / "react_loop.py",
+        rag_root / "agent" / "react_loop.py",
     )
     full_run_agent_func = full_agent_module.run_agent
     full_run_agent_stream_func = full_agent_module.run_agent_stream
 
-    @main_bp.route("/")
-    def main_index():
-        return render_template("index.html", api_base="/main")
+    k = get_required_api_key()
+    show_key = k if (is_browser_key_exposure_enabled() and k) else None
+
+    @app.route("/")
+    def index():
+        return render_template(
+            "index.html",
+            api_base="",
+            browser_api_key=show_key,
+            session_login_enabled=bool(get_session_password()),
+        )
 
     _register_rag_routes(
-        main_bp,
+        app,
         main_config,
         main_filters,
         query_func=full_query_func,
         run_agent_func=full_run_agent_func,
         run_agent_stream_func=full_run_agent_stream_func,
     )
-    app.register_blueprint(main_bp)
+
+    beta_bp = Blueprint(
+        "beta",
+        __name__,
+        url_prefix="/beta",
+        template_folder=str(eng_root / "templates"),
+        static_folder=str(eng_root / "static"),
+        static_url_path="/static",
+    )
+
+    @beta_bp.route("/")
+    def beta_index():
+        # Blueprint templates are namespaced under beta/ so the file name does not
+        # collide with the app-level scripts/rag/templates/index.html.
+        return render_template("beta/index.html", api_base="/beta")
+
+    # English query/agent come from sys.path resolution (english_config.py inserted
+    # english-v1-rag first), so the default imports inside _register_rag_routes pick
+    # them up — no explicit module loading needed here.
+    _register_rag_routes(beta_bp, english_config, english_filters)
+    app.register_blueprint(beta_bp)
 
     _register_dual_warmup(app, english_config, main_config)
     return app

@@ -439,7 +439,7 @@ def register_auth(app) -> None:
         path = request.path or ""
         if path.startswith("/auth") or path.startswith("/static"):
             return None
-        if path.startswith("/main/auth") or path.startswith("/main/static"):
+        if path.startswith("/beta/static"):
             return None
         if session.get("user_id"):
             return None

@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  /** Empty at `/`, `/main` when full-corpus UI is mounted under a blueprint. */
+  /** Empty at `/` (main full-corpus UI), `/beta` when the English UI is mounted under a blueprint. */
   var RAG_PREFIX = (document.body.getAttribute("data-api-base") || "").replace(
     /\/$/,
     "",

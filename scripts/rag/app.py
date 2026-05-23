@@ -1,6 +1,7 @@
-"""Flask web interface — full corpus only at ``/`` (dev / Makefile ``make web``).
+"""Flask web interface — full multilingual corpus only at ``/`` (dev / Makefile ``make web``).
 
-For English + full corpus in one process, use ``english-v1-rag/app.py`` (port 5002).
+For the dual setup (full corpus at ``/``, English beta at ``/beta``) use
+``english-v1-rag/app.py`` (port 5002) — that's the production entrypoint.
 
 Implementation lives in ``app_factory.py`` so routes stay in one place.
 """

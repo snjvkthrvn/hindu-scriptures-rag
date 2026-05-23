@@ -1,4 +1,4 @@
-"""Flask web interface: English corpus at ``/``, full corpus at ``/main``.
+"""Flask web interface: full multilingual corpus at ``/``, English beta at ``/beta``.
 
 Railway / Docker / production use this entrypoint (port 5002).
 
