@@ -640,7 +640,18 @@ def parse_upanishads(base_dir):
 
 
 def main():
-    base_dir = Path.home() / "hindu-scriptures-rag"
+    import argparse
+
+    arg_parser = argparse.ArgumentParser(
+        description="Parse all Hindu scriptures into unified verse JSON"
+    )
+    arg_parser.add_argument(
+        "--base-dir",
+        default=str(Path(__file__).resolve().parent.parent),
+        help="Project root containing raw/ and final/ (default: auto-detected)",
+    )
+    args = arg_parser.parse_args()
+    base_dir = Path(args.base_dir).expanduser()
 
     print("\n" + "=" * 70)
     print("  HINDU SCRIPTURE RAG - COMPREHENSIVE PARSING")

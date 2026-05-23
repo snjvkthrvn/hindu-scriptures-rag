@@ -1,8 +1,8 @@
 """Detect and merge duplicate verses from multiple sources."""
 
 import json
+import re
 import sys
-from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
@@ -10,73 +10,37 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 class DuplicateDetector:
-    """Detect duplicate verses across sources."""
+    """Detect exact-duplicate verses across sources via normalized-text hashing."""
 
-    def __init__(self, similarity_threshold: float = 0.8):
-        """
-        Initialize detector.
+    # Strip whitespace, digits, danda marks, and punctuation so trivially
+    # different encodings of the same verse collapse to one key.
+    _STRIP = re.compile(r"[\s।॥|.,;:!?()\[\]{}/\\0-9०-९‐-―-]")
 
-        Args:
-            similarity_threshold: Minimum similarity (0-1) to consider verses duplicates
-        """
-        self.threshold = similarity_threshold
+    @classmethod
+    def _dedup_key(cls, verse: dict[str, Any]) -> str | None:
+        """Return a normalized text key, or None if the verse is too short to match."""
+        content = verse.get("content", {})
+        text = content.get("sanskrit") or content.get("translation") or ""
+        key = cls._STRIP.sub("", text.lower())
+        return key if len(key) >= 8 else None
 
     def find_duplicates(self, verses: list[dict[str, Any]]) -> list[list[int]]:
         """
-        Find groups of duplicate verses (by index).
+        Group verses sharing an identical normalized text key.
+
+        O(n) bucketing. The original pairwise scan was O(n^2) — infeasible at
+        full corpus scale (~10^10 fuzzy comparisons).
 
         Returns:
-            List of groups, where each group is a list of verse indices
+            Duplicate groups; each group is a list of verse indices.
         """
-        duplicates = []
-        processed = set()
+        buckets: dict[str, list[int]] = {}
+        for i, verse in enumerate(verses):
+            key = self._dedup_key(verse)
+            if key is not None:
+                buckets.setdefault(key, []).append(i)
 
-        for i, verse1 in enumerate(verses):
-            if i in processed:
-                continue
-
-            group = [i]
-            processed.add(i)
-
-            for j in range(i + 1, len(verses)):
-                if j in processed:
-                    continue
-
-                if self._are_duplicates(verse1, verses[j]):
-                    group.append(j)
-                    processed.add(j)
-
-            if len(group) > 1:
-                duplicates.append(group)
-
-        return duplicates
-
-    def _are_duplicates(self, verse1: dict[str, Any], verse2: dict[str, Any]) -> bool:
-        """Check if two verses are duplicates."""
-        # Compare Sanskrit text (most reliable)
-        sanskrit1 = verse1.get("content", {}).get("sanskrit", "").lower().strip()
-        sanskrit2 = verse2.get("content", {}).get("sanskrit", "").lower().strip()
-
-        if sanskrit1 and sanskrit2:
-            similarity = self._string_similarity(sanskrit1, sanskrit2)
-            if similarity > self.threshold:
-                return True
-
-        # Compare translation
-        trans1 = verse1.get("content", {}).get("translation", "").lower().strip()
-        trans2 = verse2.get("content", {}).get("translation", "").lower().strip()
-
-        if trans1 and trans2 and len(trans1) > 50 and len(trans2) > 50:
-            similarity = self._string_similarity(trans1, trans2)
-            if similarity > self.threshold:
-                return True
-
-        return False
-
-    @staticmethod
-    def _string_similarity(s1: str, s2: str) -> float:
-        """Calculate similarity between two strings (0-1)."""
-        return SequenceMatcher(None, s1, s2).ratio()
+        return [indices for indices in buckets.values() if len(indices) > 1]
 
 
 class DuplicateMerger:
@@ -149,45 +113,38 @@ def deduplicate_verses(verses: list[dict[str, Any]]) -> tuple[list[dict[str, Any
     Returns:
         (deduplicated_verses, statistics)
     """
-    detector = DuplicateDetector(similarity_threshold=0.8)
+    detector = DuplicateDetector()
     merger = DuplicateMerger()
 
     print("Detecting duplicates...")
     duplicates = detector.find_duplicates(verses)
-
     print(f"Found {len(duplicates)} duplicate groups")
 
-    # Mark duplicates for removal
-    duplicate_indices = set()
-    for group in duplicates:
-        duplicate_indices.update(group[1:])  # Keep first, remove rest
+    # Map each duplicated verse index to its group.
+    index_to_group: dict[int, int] = {}
+    for group_idx, group in enumerate(duplicates):
+        for i in group:
+            index_to_group[i] = group_idx
 
-    # Merge duplicate groups
     merged_verses = []
     processed_groups = set()
+    duplicates_removed = 0
 
     for i, verse in enumerate(verses):
-        # Check if this verse is part of a duplicate group
-        is_part_of_group = False
-        for group_idx, group in enumerate(duplicates):
-            if i in group:
-                if group_idx not in processed_groups:
-                    # Merge this group
-                    group_verses = [verses[j] for j in group]
-                    merged = merger.merge_group(group_verses)
-                    merged_verses.append(merged)
-                    processed_groups.add(group_idx)
-                is_part_of_group = True
-                break
-
-        # If not part of a duplicate group, keep as-is
-        if not is_part_of_group:
+        group_idx = index_to_group.get(i)
+        if group_idx is None:
             merged_verses.append(verse)
+            continue
+        if group_idx not in processed_groups:
+            group_verses = [verses[j] for j in duplicates[group_idx]]
+            merged_verses.append(merger.merge_group(group_verses))
+            processed_groups.add(group_idx)
+            duplicates_removed += len(group_verses) - 1
 
     stats = {
         "original_count": len(verses),
         "duplicate_groups": len(duplicates),
-        "duplicates_removed": len(duplicate_indices),
+        "duplicates_removed": duplicates_removed,
         "final_count": len(merged_verses),
         "deduplication_ratio": 1 - (len(merged_verses) / len(verses)) if verses else 0,
     }
@@ -238,9 +195,6 @@ def main():
         "--input", default="~/hindu-scriptures-rag/final/verses.json", help="Input verses JSON file"
     )
     parser.add_argument("--output", help="Output file (default: input file with _deduped suffix)")
-    parser.add_argument(
-        "--threshold", type=float, default=0.8, help="Similarity threshold for duplicates (0-1)"
-    )
 
     args = parser.parse_args()
     input_file = Path(args.input).expanduser()
