@@ -103,3 +103,30 @@ scripts/rag/_remote_prompts.txt
 
 # Static-HTML snapshots produced by scripts/clone_frontend.py (design review only)
 frontend-clone/
+
+# AI tool runtime (matches the .superpowers/**/state/ pattern above)
+.antigravitycli/
+.aider*
+.windsurfrules
+.cline_*
+
+# Additional Python tool caches
+.mypy_cache/
+.dmypy.json
+.tox/
+
+# SQLite / generic local DBs (data/auth.db is also explicitly ignored above)
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
+
+# Merge / rebase leftovers
+*.orig
+*.rej
+
+# Flask instance folder
+instance/
+
+# Node (defensive — for any future frontend tooling)
+node_modules/
