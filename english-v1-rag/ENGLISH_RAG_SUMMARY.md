@@ -1,10 +1,14 @@
-# English RAG v1 — Summary for Claude Code
+# English RAG v1 — Technical Reference
 
 ## Overview
 
-The **English-only RAG** is a parallel pipeline that indexes only verses with English translations into a separate Qdrant collection (`hindu_scriptures_english`). It uses the same search/query code as the full RAG; only the input corpus and collection name differ.
+The **English-only RAG** is a parallel pipeline that indexes only verses with English translations into a separate Qdrant collection (`hindu_scriptures_english`). The retrieval primitives (indexer, vector store, embeddings, hybrid search) come from `scripts/rag/`; the corpus, query path, prompts, and agent live here.
 
-**Corpus size:** ~13,800 verses (vs ~118k in full corpus with Sanskrit, commentaries)
+In production, `english-v1-rag/app.py` is the dual-app entrypoint: it serves the full multilingual corpus at `/` and mounts the English UI as a Flask blueprint at `/beta`. Local dev can run this file directly on port 5002.
+
+**Corpus size:** ~13,800 verses (vs ~118k in the full corpus with Sanskrit, commentaries, and additional sources).
+
+For setup and quick commands see [README.md](README.md); for the project overview see [../README.md](../README.md).
 
 ---
 
@@ -12,17 +16,23 @@ The **English-only RAG** is a parallel pipeline that indexes only verses with En
 
 ```
 english-v1-rag/
+├── app.py                    # Dual-app Flask entrypoint (port 5002, mounts /beta)
+├── cli.py                    # Interactive Q&A
 ├── build_english_verses.py   # Aggregates all English sources → verses_english_only.json
 ├── index_english.py          # Indexes into Qdrant (calls scripts/rag/indexer.py)
-├── parsers/                  # Parsers for HTML/plain-text sources
+├── english_config.py         # RAGConfig override (collection, top_k, prompts)
+├── query.py                  # One-shot RAG (English prompts + hybrid query)
+├── prompt_templates.py       # English-flavored system prompts
+├── agent/                    # ReAct agent (mirrors scripts/rag/agent/ with English tools)
+├── parsers/                  # Source-specific parsers
 │   ├── yoga_sutras.py        # raw/sacred-texts/yoga_sutras.html
 │   ├── gutenberg_gita.py     # raw/gutenberg/pg2388_bhagavad_gita.txt (Arnold)
 │   └── gutenberg_mahabharata.py  # raw/gutenberg/pg15474_mahabharata.txt (Ganguli)
 ├── verses_english_only.json  # Output corpus (built by build_english_verses.py)
-└── README.md
+└── templates/beta/, static/  # /beta UI assets
 ```
 
-**RAG components:** Shared from `scripts/rag/` — `indexer.py`, `search.py`, `query.py`, `vector_store.py`, `embeddings.py`, `config.py`, `app.py`, `cli.py`. No code changes needed; config selects collection.
+**Shared from `scripts/rag/`:** `indexer.py`, `search.py`, `vector_store.py`, `embeddings.py`, `hybrid_query.py`, `hybrid_router.py`, `config.py`, `api_security.py`, `moderation.py`, `auth_backend.py`. The English side imports these directly — only the corpus, collection name, and prompts diverge.
 
 ---
 
