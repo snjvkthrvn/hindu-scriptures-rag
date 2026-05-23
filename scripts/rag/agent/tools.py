@@ -14,8 +14,55 @@ from pathlib import Path
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from api_security import wrap_tool_result
 from config import RAGConfig
 from search import format_context, search, search_by_verse_id, search_with_context_expansion
+
+# Hard caps on tool inputs. The LLM picks them, but a buggy or jailbroken plan
+# could otherwise send pathologically large values that blow up token use or
+# stress the embedding API. Tool results are also length-capped (TOOL_MAX_RESULT_CHARS).
+_MAX_QUERY_LEN = 1000
+_MAX_REF_LEN = 200
+_MAX_NAME_LEN = 200
+_TOOL_MAX_RESULT_CHARS = 60_000
+
+_VALID_CATEGORIES = {"shruti", "smriti", "itihasa", ""}
+_VALID_SCHOOLS = {
+    "advaita",
+    "vishishtadvaita",
+    "dvaita",
+    "shuddhadvaita",
+    "kashmir_shaivism",
+    "common",
+    "",
+}
+
+
+def _str_arg(input_data: dict, key: str, max_len: int) -> str:
+    """Coerce a tool argument to a bounded string. Non-strings return ''. """
+    v = input_data.get(key)
+    if v is None:
+        return ""
+    if not isinstance(v, str):
+        v = str(v)
+    return v.strip()[:max_len]
+
+
+def _int_arg(input_data: dict, key: str, default: int, lo: int, hi: int) -> int:
+    v = input_data.get(key, default)
+    try:
+        n = int(v)
+    except (ValueError, TypeError):
+        return default
+    return max(lo, min(n, hi))
+
+
+def _truncate_for_model(text: str) -> str:
+    if not text:
+        return text
+    if len(text) <= _TOOL_MAX_RESULT_CHARS:
+        return text
+    return text[:_TOOL_MAX_RESULT_CHARS] + "\n[...truncated...]"
 
 # ── Source name aliases → canonical names (as in verses_enriched.json) ────
 
@@ -389,40 +436,54 @@ def normalize_verse_ref(ref: str) -> str:
 # ── Tool execution ────────────────────────────────────────────────────────
 
 
+_TOOL_DISPATCH = {
+    "search_scriptures": "_exec_search_scriptures",
+    "search_commentaries": "_exec_search_commentaries",
+    "get_verse": "_exec_get_verse",
+    "compare_schools": "_exec_compare_schools",
+    "search_story": "_exec_search_story",
+}
+
+
 def execute_tool(name: str, input_data: dict, config: RAGConfig) -> str:
-    """Execute a tool and return the result as a string for Claude."""
-    if name == "search_scriptures":
-        return _exec_search_scriptures(input_data, config)
-    elif name == "search_commentaries":
-        return _exec_search_commentaries(input_data, config)
-    elif name == "get_verse":
-        return _exec_get_verse(input_data, config)
-    elif name == "compare_schools":
-        return _exec_compare_schools(input_data, config)
-    elif name == "search_story":
-        return _exec_search_story(input_data, config)
-    else:
-        return f"Unknown tool: {name}"
+    """Execute a tool and return the result wrapped as untrusted data for Claude.
+
+    Wrapping defangs indirect prompt injection from retrieved scripture text:
+    the model sees the output between TOOL_RESULT delimiters and the system prompt
+    tells it to treat that block as evidence, not instructions.
+    """
+    if not isinstance(input_data, dict):
+        return wrap_tool_result(name, "Error: invalid tool input")
+    fn_name = _TOOL_DISPATCH.get(name)
+    if fn_name is None:
+        return wrap_tool_result("invalid", f"Unknown tool: {name!r}")
+    raw = globals()[fn_name](input_data, config)
+    return wrap_tool_result(name, _truncate_for_model(raw))
 
 
 def _exec_search_scriptures(input_data: dict, config: RAGConfig) -> str:
-    query = input_data.get("query", "")
+    query = _str_arg(input_data, "query", _MAX_QUERY_LEN)
     if not query:
         return "Error: query is required"
 
     filters = {}
-    if input_data.get("source_text"):
-        filters["source_text"] = normalize_source_text(input_data["source_text"])
-    if input_data.get("category"):
-        filters["category"] = input_data["category"]
-    if input_data.get("tradition"):
-        filters["tradition"] = input_data["tradition"]
+    source_text = _str_arg(input_data, "source_text", _MAX_NAME_LEN)
+    if source_text:
+        filters["source_text"] = normalize_source_text(source_text)
+    category = _str_arg(input_data, "category", 32)
+    if category:
+        if category not in _VALID_CATEGORIES:
+            return f"Error: invalid category {category!r}"
+        filters["category"] = category
+    tradition = _str_arg(input_data, "tradition", 64)
+    if tradition:
+        filters["tradition"] = tradition
 
-    # Allow caller to filter by chunk_type, but default to searching everything
-    if input_data.get("chunk_type"):
-        filters["chunk_type"] = input_data["chunk_type"]
+    chunk_type = _str_arg(input_data, "chunk_type", 32)
+    if chunk_type:
+        filters["chunk_type"] = chunk_type
 
-    top_k = min(input_data.get("top_k", 8), 20)
+    top_k = _int_arg(input_data, "top_k", 8, 1, 20)
     results = search(query, config=config, filters=filters, top_k=top_k)
 
     if not results:
@@ -432,17 +493,21 @@ def _exec_search_scriptures(input_data: dict, config: RAGConfig) -> str:
 
 
 def _exec_search_commentaries(input_data: dict, config: RAGConfig) -> str:
-    query = input_data.get("query", "")
+    query = _str_arg(input_data, "query", _MAX_QUERY_LEN)
     if not query:
         return "Error: query is required"
 
     filters = {"chunk_type": "commentary"}
-    if input_data.get("school"):
-        filters["school"] = input_data["school"]
-    if input_data.get("author"):
-        filters["author"] = input_data["author"]
+    school = _str_arg(input_data, "school", 64)
+    if school:
+        if school not in _VALID_SCHOOLS:
+            return f"Error: invalid school {school!r}"
+        filters["school"] = school
+    author = _str_arg(input_data, "author", _MAX_NAME_LEN)
+    if author:
+        filters["author"] = author
 
-    top_k = min(input_data.get("top_k", 10), 20)
+    top_k = _int_arg(input_data, "top_k", 10, 1, 20)
     results = search(query, config=config, filters=filters, top_k=top_k)
 
     if not results:
@@ -452,7 +517,7 @@ def _exec_search_commentaries(input_data: dict, config: RAGConfig) -> str:
 
 
 def _exec_get_verse(input_data: dict, config: RAGConfig) -> str:
-    ref = input_data.get("verse_ref", "")
+    ref = _str_arg(input_data, "verse_ref", _MAX_REF_LEN)
     if not ref:
         return "Error: verse_ref is required"
 
@@ -466,7 +531,7 @@ def _exec_get_verse(input_data: dict, config: RAGConfig) -> str:
 
 
 def _exec_compare_schools(input_data: dict, config: RAGConfig) -> str:
-    ref = input_data.get("verse_ref", "")
+    ref = _str_arg(input_data, "verse_ref", _MAX_REF_LEN)
     if not ref:
         return "Error: verse_ref is required"
 
@@ -520,15 +585,16 @@ def _exec_compare_schools(input_data: dict, config: RAGConfig) -> str:
 
 def _exec_search_story(input_data: dict, config: RAGConfig) -> str:
     """Execute story search with context expansion around hits."""
-    query = input_data.get("query", "")
+    query = _str_arg(input_data, "query", _MAX_QUERY_LEN)
     if not query:
         return "Error: query is required"
 
     filters = {}
-    if input_data.get("source_text"):
-        filters["source_text"] = normalize_source_text(input_data["source_text"])
+    source_text = _str_arg(input_data, "source_text", _MAX_NAME_LEN)
+    if source_text:
+        filters["source_text"] = normalize_source_text(source_text)
 
-    context_window = min(input_data.get("context_window", 10), 30)
+    context_window = _int_arg(input_data, "context_window", 10, 1, 30)
 
     results = search_with_context_expansion(
         query,

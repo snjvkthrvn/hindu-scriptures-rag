@@ -4,8 +4,14 @@ Same pipeline as scripts/rag/query.py but uses local English prompts.
 """
 
 import llm as llm_module
+from api_security import validate_and_prepare_question, wrap_untrusted_user_text
 from config import LLMProvider, RAGConfig
 from hybrid_query import hybrid_search
+from moderation import (
+    check_openai_output_moderation,
+    check_openai_user_moderation,
+    finalize_model_output,
+)
 from sanskrit_gloss import augment_context_with_sanskrit_gloss
 from search import format_context
 
@@ -21,6 +27,9 @@ def query_rag(
     """Full RAG pipeline: hybrid search -> format prompt -> Claude -> answer + sources."""
     if config is None:
         config = get_english_config()
+
+    question = validate_and_prepare_question(question, config)
+    check_openai_user_moderation(question, config)
 
     full_search_config = get_full_corpus_config(config, top_k=config.top_k)
     results, retrieval_mode = hybrid_search(
@@ -39,7 +48,8 @@ def query_rag(
 
     context = format_context(results)
     context = augment_context_with_sanskrit_gloss(context, results, question, config)
-    user_prompt = QUERY_PROMPT_TEMPLATE.format(context=context, question=question)
+    user_block = wrap_untrusted_user_text(question)
+    user_prompt = QUERY_PROMPT_TEMPLATE.format(context=context, user_message=user_block)
 
     if config.llm_provider == LLMProvider.ANTHROPIC:
         answer = llm_module.generate(
