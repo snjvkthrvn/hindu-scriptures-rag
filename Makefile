@@ -147,9 +147,9 @@ deploy:
 	docker compose up -d --build
 	@echo ""
 	@echo "Services started:"
-	@echo "  English RAG  → http://localhost (via Caddy)"
-	@echo "  Main RAG     → http://localhost/main (via Caddy)"
-	@echo "  Qdrant       → http://localhost:6333"
+	@echo "  Main RAG       → http://localhost (via Caddy)"
+	@echo "  English (beta) → http://localhost/beta (via Caddy)"
+	@echo "  Qdrant         → http://localhost:6333"
 	@echo ""
 	@echo "Next: run 'make deploy-index' to index verses into Qdrant."
 

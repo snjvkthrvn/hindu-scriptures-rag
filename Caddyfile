@@ -1,26 +1,17 @@
-# Example reverse proxy: English UI at / and full-corpus UI under /main.
+# Reverse-proxy example.
 #
-# Docker Compose in this repo runs a single `rag` service (English app on 5002).
-# To match this Caddyfile you would run two processes:
-#   - english-rag:  english-v1-rag/app.py  (port 5002) — serves / and proxies /main to…
-#   - main-rag:     scripts/rag/app.py     (port 5001) — full corpus only at /
+# Default deployment (Docker Compose in this repo) runs a single `rag` service
+# (english-v1-rag/app.py on port 5002) that serves BOTH:
+#   - /       → full multilingual corpus
+#   - /beta   → English-only beta
+# In that mode you don't need any path-based routing here — just proxy
+# everything to the rag service.
 #
-# Alternatively use one english-v1-rag process: it serves English at / and the full
-# corpus at /main (same origin). Then you only need one upstream (e.g. rag:5002)
-# and can drop the /main path split below.
+# If you ever run them as two separate processes:
+#   - main-rag:  scripts/rag/app.py      (port 5001) — full corpus only at /
+#   - beta-rag:  english-v1-rag/app.py   (port 5002) — English at / (without /beta prefix)
+# you can split with `handle /beta/*` blocks and `uri strip_prefix /beta`.
 
 {$DOMAIN:localhost} {
-	handle /main/* {
-		uri strip_prefix /main
-		reverse_proxy main-rag:5001
-	}
-
-	handle /main {
-		uri strip_prefix /main
-		reverse_proxy main-rag:5001
-	}
-
-	handle {
-		reverse_proxy english-rag:5002
-	}
+	reverse_proxy rag:5002
 }
