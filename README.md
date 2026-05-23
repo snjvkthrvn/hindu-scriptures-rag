@@ -1,140 +1,154 @@
-# Hindu Scripture RAG Data Pipeline
+# Hindu Scriptures RAG
 
-A comprehensive Python framework for downloading, parsing, and formatting Hindu scripture texts into a unified JSON format optimized for Retrieval-Augmented Generation (RAG) systems.
+A retrieval-augmented chat interface over a 118k-verse corpus of Hindu scripture (Vedas, Upanishads, Gita, Mahabharata, Ramayana, Ramcharitmanas), with both a full multilingual experience and an English-only beta. Two pieces:
 
-## Features
+1. A **data pipeline** that builds a unified verse corpus from public-domain GitHub repos and Project Gutenberg.
+2. A **Flask web app** that indexes the corpus into Qdrant, retrieves with hybrid (dense + BM25) search, and answers questions via Anthropic Claude or OpenAI.
 
-- **Multi-source downloading**: GitHub repos, Project Gutenberg, sacred-texts.com
-- **Format parsing**: JSON, CSV, plain text, HTML
-- **Unicode handling**: Devanagari normalization, ITRANS conversion
-- **Verse detection**: Automatic identification of verse boundaries
-- **Schema unification**: Converts diverse formats to consistent structure
-- **Metadata enrichment**: Automatic theme and life domain tagging
-- **Deduplication**: Identifies and merges duplicate verses across sources
-- **Quality validation**: Comprehensive verse validation and reporting
+## Corpus
 
-## Quick Start
+`final/verses_enriched.json` — 118,358 verses, schema-validated.
 
-### 1. Install Dependencies
+| Scripture | Verses | Source |
+|---|---:|---|
+| Bhagavad Gita | 701 | DharmicData (GitHub) |
+| 10 Principal Upanishads | 546 | indian-scriptures (GitHub) — partial; see caveat below |
+| Rigveda | 10,200 | DharmicData |
+| Atharvaveda | 6,079 | DharmicData |
+| Yajurveda | 2,027 | DharmicData |
+| Mahabharata (Critical Edition) | 73,816 | DharmicData |
+| Valmiki Ramayana | 22,742 | DharmicData |
+| Ramcharitmanas | 2,247 | DharmicData |
+| **Total** | **118,358** | |
+
+The pipeline also extracts **13,947 commentary entries** alongside the verses.
+
+**Upanishad caveat.** The `indian-scriptures` source CSVs are incomplete. Chandogya is entirely absent (0/630), Brihadaranyaka has 104 of 891 verses, Taittiriya 20 of 71, Katha 71 of 119. The other six principal Upanishads are complete. This is a source data limitation, not a pipeline defect.
+
+## Web app
+
+Two Flask processes share a backend in `scripts/rag/`. In production both serve through one Docker container on port 5002, routed by Caddy:
+
+| URL | Serves | Code path |
+|---|---|---|
+| `/` | Full multilingual corpus | `scripts/rag/templates/index.html` |
+| `/beta` | English-only beta | `english-v1-rag/templates/beta/index.html` (mounted as a Flask blueprint) |
+
+Both routes hit the same `/api/query` and `/api/agent/stream` endpoints (the beta proxies via `/beta/api/...`). Shared application factory lives in [`scripts/rag/app_factory.py`](scripts/rag/app_factory.py); `english-v1-rag/app.py` and `scripts/rag/app.py` are thin entrypoints.
+
+**Dev (no Docker):** `python english-v1-rag/app.py` (port 5002, dual-app) or `python scripts/rag/app.py` (port 5001, full corpus only).
+
+### Retrieval
+
+- **Vector store:** Qdrant (hybrid: dense + BM25 sparse). The free Cohere embedding model `embed-multilingual-v3.0` (1,024 dims) is the default; English-only deployments can swap to `embed-english-v3.0`.
+- **Hybrid router** in [`scripts/rag/hybrid_router.py`](scripts/rag/hybrid_router.py): plain-English questions default to the English corpus; verse refs, Devanagari, transliteration, commentary/school signals route to the full corpus. Weak first-pass evidence escalates to both, fused with Reciprocal Rank Fusion.
+- **Two query modes:** one-shot RAG (`query.py` — retrieve once, answer) and ReAct agent (`agent/react_loop.py` — iterative tool use across `search_scriptures`, `search_commentaries`, `get_verse`, `compare_schools`, `search_story`).
+
+### Security
+
+User input and tool results are wrapped in `<<<UNTRUSTED_USER ...>>>` and `<<<TOOL_RESULT name=... END_TOOL_RESULT>>>` delimiters; the system prompt instructs the model to treat both as data, never as instructions. Delimiter break-out attempts are scrubbed in [`scripts/rag/api_security.py`](scripts/rag/api_security.py). Auth (session + API key), CORS, rate limiting, and OpenAI moderation are layered in `auth_backend.py`, `api_security.py`, and `moderation.py`. Tool arguments are bounded and category/school inputs are allowlisted.
+
+## Quick start (web app)
 
 ```bash
-cd ~/hindu-scriptures-rag
+git clone https://github.com/snjvkthrvn/hindu-scriptures-rag.git
+cd hindu-scriptures-rag
+
+cp .env.example .env       # set ANTHROPIC_API_KEY, COHERE_API_KEY (and optional auth vars)
+make deploy                # docker compose up: Qdrant + rag service + Caddy
+make deploy-index          # one-time: embed verses into Qdrant
+```
+
+Then open `http://localhost/` (full corpus) or `http://localhost/beta` (English).
+
+Stop and inspect:
+
+```bash
+make deploy-down           # docker compose down
+make deploy-logs           # tail logs
+```
+
+## Rebuilding the corpus
+
+The current `final/verses_enriched.json` is already complete. You only need to rebuild if you've changed the parsers, added a source, or are starting from a fresh clone.
+
+```bash
+# Windows requires UTF-8 console (the parsers print emoji):
+$env:PYTHONUTF8 = "1"    # PowerShell — or `set PYTHONUTF8=1` in cmd.exe
+
 pip install -r requirements.txt
+
+# 1. Download from GitHub (~2 min). Project Gutenberg downloads are optional.
+python scripts/downloaders/download_github.py
+
+# 2. Parse all sources into one verse list (~5 min).
+python scripts/parse_all_scriptures.py        # → final/verses.json
+
+# 3. Enrich with themes and life-domain tags (~1 min).
+python scripts/formatters/add_metadata.py --input final/verses.json
+# → final/verses_enriched.json   ← this is the RAG corpus
+
+# 4. Optional: produce a deduplicated version (~10 sec).
+python scripts/formatters/deduplicate.py --input final/verses.json
+# → final/verses_deduped.json
 ```
 
-### 2. Run Full Pipeline
+The older orchestrator `scripts/main.py` (driven by the Makefile) chains the same stages but assumes a Unix layout and hardcodes `~/hindu-scriptures-rag` as the base path. Use it on Linux/macOS; on Windows, drive the scripts individually as shown above.
 
-```bash
-python scripts/main.py run --base-dir ~/hindu-scriptures-rag
-```
+### What the pipeline does NOT do
 
-This will:
-1. Download from GitHub, Project Gutenberg, and sacred-texts.com
-2. Parse all source files
-3. Normalize to unified schema
-4. Enrich with metadata
-5. Deduplicate verses
-6. Validate output
+- **Download from sacred-texts.com.** That source is blocked by Cloudflare and excludes ClaudeBot via robots.txt; the `download_sacred_texts.py` script remains in the tree but won't fetch anything new. The texts attributed to it in earlier versions of these docs are sourced from the GitHub repos instead.
+- **Fuzzy deduplication.** The deduper merges exact duplicates after whitespace/punctuation normalization (the earlier O(n²) similarity-based dedup wouldn't finish at 118k verses). Indirect duplicates between e.g. Atharvaveda and Rigveda are caught; near-duplicates with varied phrasing are not. ~1,800 exact duplicates were found (1.5% of corpus) — those are real, attested cross-quotations.
 
-### 3. Check Output
-
-```bash
-# View final verses
-ls -lh final/
-
-# Validate verses
-python -c "
-import json
-with open('final/verses.json') as f:
-    verses = json.load(f)
-print(f'Total verses: {len(verses)}')
-"
-```
-
-## Web RAG chat UI
-
-The chat servers depend on **`requirements-rag.txt`** (Flask, Qdrant, Cohere, Anthropic, etc.). The **data pipeline** uses **`requirements.txt`** — install both if you work on ingest and the UI.
-
-| Entrypoint | Command | Default port |
-|------------|---------|--------------|
-| English edition | `python english-v1-rag/app.py` | 5002 |
-| Full corpus (standalone) | `python scripts/rag/app.py` | 5001 |
-| English + full corpus at `/main` | `python english-v1-rag/app.py` | 5002 |
-
-Shared Flask logic lives in **`scripts/rag/app_factory.py`** (`create_dual_app` for production, `create_full_app` for full-corpus-only dev). `english-v1-rag/app.py` and `scripts/rag/app.py` are thin entrypoints.
-
-`docker compose` runs the English app on **5002** (`docker-compose.yml`). Copy **`.env.example`** to `.env` and set API keys (and optional auth variables).
-
-### Planned Hybrid RAG Fusion
-
-Approved design direction for combining the English-first and full-corpus RAGs:
-
-- Keep the **two existing corpora and collections**. Do **not** reindex into one unified collection.
-- Add a **rule-based hybrid router** above `search()`:
-  - full-corpus verse refs, Devanagari, Sanskrit/transliteration, commentary/school/compare/original/story signals route to the **full** corpus
-  - Yoga Sūtra refs stay **English-first** unless another full-corpus signal is present
-  - broad plain-English questions default to the **English** corpus
-  - weak first-pass evidence escalates to **both**
-- Add two shared modules in `scripts/rag/`:
-  - `hybrid_router.py` for routing and escalation
-  - `hybrid_query.py` for parallel retrieval, normalization, fusion, and fallback behavior
-- When both corpora are queried:
-  - deduplicate by stable keys like `verse_id + chunk_type + author`
-  - use **corpus-level Reciprocal Rank Fusion (RRF)**, not raw score comparison
-  - cap the merged evidence at `config.top_k` after fusion
-- In the agent tool path, make only `search_scriptures` and `search_commentaries` hybrid-aware. Keep `get_verse`, `compare_schools`, and `search_story` on the precise single-corpus/full path.
-- Warm **both corpora** on startup in the background so both vector stores and BM25 encoders are ready for hybrid traffic.
-- Phase 1 is **backend-only**: one answer, one merged source list, no required UI change. Phase 2 may add visible corpus diagnostics if useful.
-
-### Welcome screen — Option B (verse card + prompts)
-
-**Status:** Spec agreed (brainstorming, 2026-04-10). Implementation tracked below.
-
-**Goal:** Add a daily curated **verse card** and two **CTAs** (“Explain this verse simply”, “How does this apply today?”) that **only prime** the input. Keep the existing **six** starter chips unchanged (they still fill the question and send). Rotate verse by **local calendar day** using `dayOfYear % N` over a JSON list (`N` ≥ 30). If JSON fails to load, hide the verse block only.
-
-**Data:** `scripts/rag/static/data/welcome-verses.json` — array of `{ "ref", "eng", "dev"?, "iast"? }`. Copy the file to `english-v1-rag/static/data/` and update both `templates/index.html`, `static/css/style.css`, and `static/js/app.js` (the English app mirrors `scripts/rag/static`).
-
-**Out of scope for this increment:** Thread drawer, 3-state theme, streaming/answer-footer redesign (see `.claude/plans/2026-04-09-frontend-ux-redesign-design.md`).
-
-**Implementation checklist**
-
-- [x] Add `welcome-verses.json` with at least 30 corpus-safe entries (`scripts/rag/static/data/` and `english-v1-rag/static/data/`).
-- [x] Mark up verse region + CTAs in `scripts/rag/templates/index.html` and `english-v1-rag/templates/index.html`.
-- [x] Style `.welcome-verse` / CTAs in both `style.css` copies.
-- [x] In `app.js` (both copies): fetch JSON, compute index, render text, bind CTAs to prime `chatInput` only; welcome hide logic unchanged.
-- [ ] Manual test: same verse same day; CTAs prime; chips auto-send; dark theme readable.
-
-## Directory Structure
+## Repository layout
 
 ```
-~/hindu-scriptures-rag/
-├── raw/                          # Downloaded source files
-│   ├── dharmic-data/
-│   ├── indian-scriptures/
-│   ├── gutenberg/
-│   ├── sacred-texts/
-│   └── ...
-├── processed/                    # Intermediate parsed files
-│   ├── tier1-essential/
-│   ├── tier2-critical/
-│   ├── tier3-epics/
-│   ├── tier4-philosophy/
-│   └── tier5-puranas/
-├── final/                        # RAG-ready outputs
-│   ├── verses.json               # All unified verses
-│   ├── verses_enriched.json      # With metadata enrichment
-│   ├── verses_deduped.json       # After deduplication
-│   ├── metadata.json             # Corpus statistics
-│   └── embeddings/               # For future embedding storage
-└── scripts/                      # Processing scripts
-    ├── main.py                   # Master orchestration
-    ├── downloaders/              # Download modules
-    ├── parsers/                  # Parsing modules
-    ├── formatters/               # Formatting modules
-    └── utils/                    # Utility functions
+.
+├── scripts/
+│   ├── parse_all_scriptures.py    # primary parser (118k verses)
+│   ├── main.py                    # legacy Unix-only orchestrator
+│   ├── downloaders/               # GitHub + Project Gutenberg downloaders
+│   ├── parsers/                   # per-source parsers
+│   ├── formatters/                # normalize, enrich, deduplicate
+│   ├── utils/                     # Unicode, verse boundary detection
+│   └── rag/                       # web app + RAG core
+│       ├── app.py, cli.py         # entrypoints
+│       ├── app_factory.py         # shared Flask factory (dual app + blueprint)
+│       ├── api_security.py        # input/output sanitization
+│       ├── auth_backend.py        # session + API key auth
+│       ├── config.py              # RAGConfig
+│       ├── embeddings.py          # Cohere client
+│       ├── vector_store.py        # Qdrant wrapper
+│       ├── indexer.py, ingest.py  # build the Qdrant collection
+│       ├── search.py              # hybrid retrieval
+│       ├── hybrid_router.py       # English vs full-corpus routing
+│       ├── hybrid_query.py        # parallel retrieval + RRF fusion
+│       ├── query.py               # one-shot RAG
+│       └── agent/                 # ReAct agent loop + tools
+│
+├── english-v1-rag/                # English-only beta (parallel corpus + UI)
+│   ├── app.py                     # dual-app entrypoint (port 5002)
+│   ├── build_english_verses.py    # English subset builder (~13.8k verses)
+│   ├── index_english.py           # index into hindu_scriptures_english collection
+│   ├── english_config.py          # RAGConfig override (different collection)
+│   ├── query.py                   # English-flavored prompts + hybrid query
+│   ├── agent/, parsers/           # mirrors of scripts/rag/{agent,parsers}
+│   └── templates/beta/, static/   # /beta UI assets
+│
+├── final/                         # corpus output (git-ignored)
+│   ├── verses_enriched.json       ← USE THIS for RAG
+│   ├── verses.json                # pre-enrichment
+│   ├── verses_deduped.json        # exact-dedup variant
+│   └── metadata.json              # corpus statistics
+│
+├── raw/                           # downloaded source files (git-ignored)
+├── Caddyfile, Dockerfile, docker-compose.yml
+├── requirements.txt               # data pipeline deps
+├── requirements-rag.txt           # web app deps
+└── english-v1-rag/README.md, ENGLISH_RAG_SUMMARY.md
 ```
 
-## Verse JSON Schema
+## Verse schema
 
 ```json
 {
@@ -150,228 +164,56 @@ Approved design direction for combining the English-first and full-corpus RAGs:
     "sanskrit": "कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।",
     "transliteration": "karmaṇy evādhikāras te mā phaleṣu kadācana",
     "translation": "You have a right to perform your prescribed duties, but you are not entitled to the fruits of your actions.",
+    "translations": { "swami_sivananda": "...", "swami_gambhirananda": "..." },
     "word_by_word": {}
   },
   "metadata": {
-    "category": "smriti",
+    "category": "shruti | smriti | itihasa",
     "tradition": "vedanta",
     "themes": ["karma_yoga", "detachment", "duty"],
     "philosophical_schools": ["advaita", "dvaita", "vishishtadvaita"],
     "life_domains": ["work", "motivation"]
   },
   "commentaries": [
-    {
-      "author": "Shankaracharya",
-      "school": "advaita",
-      "text": "..."
-    }
+    { "author": "Shankaracharya", "school": "advaita", "text": "..." }
   ],
   "provenance": {
     "download_source": "dharmic-data",
     "original_url": "https://github.com/bhavykhatri/DharmicData",
-    "license": "ODbL-1.0",
-    "processed_date": "2024-02-04T12:34:56"
+    "license": "ODbL-1.0"
   }
 }
 ```
 
-## Usage Examples
+`category`, `tradition`, `themes`, `philosophical_schools`, `life_domains` are auto-tagged during enrichment; coverage is partial (themes hit ~99.86% of verses, life-domain tagging is sparser by design — only verses with clear practical application get tagged).
 
-### Run Individual Commands
+## Configuration
 
-```bash
-# Download only
-python scripts/main.py download --base-dir ~/hindu-scriptures-rag
+`.env` (copy from `.env.example`):
 
-# Parse only
-python scripts/main.py parse --base-dir ~/hindu-scriptures-rag
+| Variable | Purpose |
+|---|---|
+| `ANTHROPIC_API_KEY` | LLM (default provider) |
+| `OPENAI_API_KEY` | Alternative LLM, also used for moderation |
+| `COHERE_API_KEY` | Embeddings (required for indexing and query) |
+| `QDRANT_URL` | Vector store endpoint (default `http://localhost:6333` in Docker) |
+| `SESSION_PASSWORD` | If set, enables session-based login |
+| `RAG_API_KEY` | Required for raw `/api/*` access from clients without a session |
+| `CORS_ORIGINS` | Comma-separated; also used by the CSRF origin guard |
+| `DOMAIN` | Caddy uses this for the `localhost` → real-host swap |
 
-# Format and enrich
-python scripts/main.py format --base-dir ~/hindu-scriptures-rag
+## Licenses
 
-# Validate
-python scripts/main.py validate --base-dir ~/hindu-scriptures-rag
-```
+Pipeline code: MIT. Source data inherits each repo's license:
 
-### Use Individual Modules
+- DharmicData — ODbL-1.0
+- indian-scriptures — CC-BY-4.0
+- Project Gutenberg — public domain
 
-```python
-from pathlib import Path
-from scripts.parsers import DharmicDataParser
-from scripts.formatters import MetadataEnricher
+Respect those when redistributing the corpus.
 
-# Parse Gita from DharmicData
-parser = DharmicDataParser(Path('raw/dharmic-data'))
-count, verses = parser.parse_directory()
+## Subsystem docs
 
-# Enrich verses
-enriched = MetadataEnricher.enrich_all(verses)
-```
-
-### Download Specific Sources
-
-```bash
-# GitHub only
-python scripts/downloaders/download_github.py --list
-python scripts/downloaders/download_github.py
-
-# Project Gutenberg only
-python scripts/downloaders/download_gutenberg.py --list
-python scripts/downloaders/download_gutenberg.py
-
-# Sacred Texts only
-python scripts/downloaders/download_sacred_texts.py --list
-python scripts/downloaders/download_sacred_texts.py --delay 2.0
-```
-
-### Parse Specific Formats
-
-```bash
-# Parse CSV Upanishads
-python scripts/parsers/parse_upanishad_csv.py ~/hindu-scriptures-rag/raw/indian-scriptures
-
-# Parse text files
-python scripts/parsers/parse_text_files.py input.txt --title "Text Title"
-
-# Parse JSON files
-python scripts/parsers/parse_dharmic_json.py ~/hindu-scriptures-rag/raw/dharmic-data
-```
-
-### Normalize and Enrich
-
-```bash
-# Normalize schema
-python scripts/formatters/normalize_schema.py \
-  --input-dir ~/hindu-scriptures-rag/processed \
-  --output ~/hindu-scriptures-rag/final/verses.json
-
-# Enrich metadata
-python scripts/formatters/add_metadata.py \
-  --input ~/hindu-scriptures-rag/final/verses.json
-
-# Deduplicate
-python scripts/formatters/deduplicate.py \
-  --input ~/hindu-scriptures-rag/final/verses.json
-```
-
-## Text Coverage
-
-### Tier 1: Essential (Must Have)
-- Bhagavad Gita (700 verses)
-- 11 Principal Upanishads
-- Yoga Sutras
-
-### Tier 2: Critical Context
-- Viveka Chudamani
-- Ashtavakra Gita
-- Narada Bhakti Sutras
-
-### Tier 3: Epic Wisdom
-- Mahabharata (key chapters)
-- Valmiki Ramayana
-- Yoga Vasistha
-
-### Tier 4: Philosophical Depth
-- Brahma Sutras with Shankara Bhashya
-- Panchadashi
-- Tattva Bodha
-
-### Tier 5: Puranic Wisdom
-- Bhagavata Purana
-- Vishnu Purana
-- Shiva Purana
-
-## Available Themes
-
-Auto-detected themes include:
-- karma_yoga, bhakti, jnana, detachment, dharma
-- atman, brahman, meditation, yoga, liberation
-- mind, death, rebirth, creation, god, nature, maya, vedas
-- And more based on content analysis
-
-## Available Life Domains
-
-Verses are tagged with relevant life domains:
-- work, relationships, purpose, motivation, anxiety, grief, anger, failure
-- success, decision, ethics, leadership, aging, patience, forgiveness, gratitude
-- mindfulness
-
-## Validation
-
-Check corpus validity:
-
-```bash
-python -c "
-from scripts.utils import CorpusValidator
-from pathlib import Path
-
-validator = CorpusValidator()
-stats = validator.validate_file(Path('final/verses.json'))
-validator.print_report(stats)
-"
-```
-
-## License
-
-The processed data pipeline is provided as-is. Please respect the licenses of individual sources:
-- DharmicData: ODbL-1.0
-- Indian Scriptures: CC-BY-4.0
-- Project Gutenberg: Public Domain
-- Sacred Texts: CC-BY-3.0
-- Sanskrit Documents: Various
-
-## Next Steps
-
-1. **Generate embeddings**: Use OpenAI text-embedding-3-large on final verses
-2. **Vector database**: Ingest into Qdrant or Pinecone
-3. **Hybrid search**: Build sparse (BM25) + dense (embedding) search index
-4. **LLM integration**: Connect to LangGraph agent for RAG queries
-
-## Troubleshooting
-
-### ModuleNotFoundError
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Add scripts to Python path
-export PYTHONPATH="${PYTHONPATH}:~/hindu-scriptures-rag/scripts"
-```
-
-### Git clone failures
-- Check internet connection
-- Verify git is installed: `git --version`
-- Try manual clone: `git clone https://github.com/bhavykhatri/DharmicData.git raw/dharmic-data/`
-
-### Unicode errors
-- Ensure UTF-8 encoding: `export PYTHONLANG=en_US.UTF-8`
-- Check file encoding: `file -i raw/**/*.txt`
-
-### Memory issues with large files
-- Process in smaller chunks
-- Use streaming instead of loading entire files
-
-## Performance
-
-Typical performance on modern hardware:
-- **Download**: 5-15 minutes (depends on connection)
-- **Parse**: 1-5 minutes
-- **Format & Normalize**: 2-10 minutes
-- **Deduplicate**: 1-3 minutes
-- **Validation**: < 1 minute
-
-## Contributing
-
-To add new sources:
-1. Create new downloader in `scripts/downloaders/`
-2. Create new parser in `scripts/parsers/`
-3. Update `main.py` to include new source
-4. Test parsing and validation
-
-## Contact & Issues
-
-For questions or issues:
-1. Check the troubleshooting section
-2. Review output logs for error messages
-3. Verify source files are properly downloaded
-4. Check Python version (3.8+)
+- [`english-v1-rag/README.md`](english-v1-rag/README.md) — English beta overview
+- [`english-v1-rag/ENGLISH_RAG_SUMMARY.md`](english-v1-rag/ENGLISH_RAG_SUMMARY.md) — technical reference for the English RAG (sources, parsers, indexing)
+- [`UPANISHAD_TRANSLATIONS.md`](UPANISHAD_TRANSLATIONS.md) — historical notes on a one-off Upanishad translation scrape (Feb 2026)

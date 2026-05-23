@@ -1,285 +1,86 @@
-# Quick Start Guide
+# Quick Start
 
-Get up and running with the Hindu Scripture RAG Pipeline in 5 minutes.
+Get the chat UI running in under five minutes. For deeper context (architecture, corpus details, schema, deployment internals), see [README.md](README.md).
 
 ## Prerequisites
 
-- Python 3.8 or higher
-- Git (for downloading some sources)
-- 2-5 GB free disk space
-- Internet connection
+- Python 3.10 or higher
+- Docker + Docker Compose (recommended) **or** a local Qdrant instance
+- A Cohere API key (embeddings) and either Anthropic or OpenAI API key (answer generation)
 
-## Installation
-
-### Option 1: Automated Setup (Recommended)
+## TL;DR — Docker
 
 ```bash
-cd ~/hindu-scriptures-rag
-./setup.sh
+git clone https://github.com/snjvkthrvn/hindu-scriptures-rag.git
+cd hindu-scriptures-rag
+
+cp .env.example .env       # fill in COHERE_API_KEY + ANTHROPIC_API_KEY
+make deploy                # starts Qdrant + Caddy + the rag service
+make deploy-index          # one-time: embed verses into Qdrant
 ```
 
-This will:
-- Create directory structure
-- Install Python dependencies
-- Set up virtual environment
-- Run system checks
+Open:
+- `http://localhost/` — full multilingual corpus
+- `http://localhost/beta` — English-only beta
 
-### Option 2: Manual Setup
+That's it.
+
+## Without Docker
+
+Run the dual-app Flask server directly:
 
 ```bash
-# Create directories
-mkdir -p ~/hindu-scriptures-rag
-cd ~/hindu-scriptures-rag
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+# source .venv/bin/activate     # macOS / Linux
 
-# Install dependencies
-pip install -r requirements.txt
+pip install -r requirements-rag.txt
 
-# Make scripts executable
-chmod +x scripts/*.py
-chmod +x scripts/downloaders/*.py
-chmod +x scripts/parsers/*.py
-chmod +x scripts/formatters/*.py
+# Start your own Qdrant somewhere and set QDRANT_URL in .env:
+docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant
+# or `make qdrant-up`
+
+python english-v1-rag/index_english.py    # one-time
+python english-v1-rag/app.py              # port 5002 by default
 ```
 
-## Quick Test
+`scripts/rag/app.py` is the full-corpus-only variant on port 5001 if you only want the main UI.
 
-Run the test suite to verify everything works:
+## Verifying the corpus
+
+The corpus file is **not** in git (it's ~170 MB). After cloning you have two options:
+
+1. Build it from sources (~10 minutes — see the "Rebuilding the corpus" section in [README.md](README.md)).
+2. Copy `final/verses_enriched.json` over from another checkout if you already have one.
+
+Quick sanity check:
 
 ```bash
-python scripts/test_pipeline.py
+python -c "import json; v=json.load(open('final/verses_enriched.json', encoding='utf-8')); print(f'{len(v):,} verses')"
 ```
 
-You should see:
-```
-✓ Unicode normalization works
-✓ Verse detection works
-✓ Verse validation works
-✓ Schema normalization works
-✓ Metadata enrichment works
-✓ Full pipeline works
-✓ All tests passed!
-```
+Expected output: `118,358 verses`. Anything materially different means the parser misfired — check `scripts/parse_all_scriptures.py` ran end-to-end.
 
-## Running the Pipeline
+## Common issues
 
-### Full Pipeline (Recommended for First Run)
+**`UnicodeEncodeError: 'charmap' codec` on Windows.** The parser prints emoji during progress reporting; cmd/PowerShell uses cp1252 by default. Fix:
 
-```bash
-python scripts/main.py run
+```powershell
+$env:PYTHONUTF8 = "1"
 ```
 
-This will:
-1. Download sources from GitHub, Project Gutenberg, and sacred-texts.com (~10-20 minutes)
-2. Parse all files (~5 minutes)
-3. Normalize and format (~5 minutes)
-4. Enrich metadata (~2 minutes)
-5. Deduplicate verses (~2 minutes)
-6. Validate output (~1 minute)
+Set this in your shell profile to make it permanent.
 
-Total time: **25-35 minutes**
+**`final/verses_enriched.json` not found.** You haven't built the corpus yet. See "Rebuilding the corpus" in [README.md](README.md) — `python scripts/parse_all_scriptures.py` is the modern entry point.
 
-### Step-by-Step Pipeline
+**Qdrant connection refused.** Confirm `QDRANT_URL` in `.env` points to a reachable instance. Default in Docker is `http://qdrant:6333` (container DNS); for local dev outside Docker, use `http://localhost:6333`.
 
-If you want more control:
+**Embedding errors / `403` from Cohere.** `COHERE_API_KEY` is missing or invalid. The free tier is enough for the initial 118k-verse index.
 
-```bash
-# Step 1: Download sources
-python scripts/main.py download
+**`/api/query` returns 401.** Either set `RAG_API_KEY` and pass it as the `X-API-Key` header, or set `SESSION_PASSWORD` and log in through the UI. With neither set, the API is open from any same-origin request (the CSRF guard still applies).
 
-# Step 2: Parse files
-python scripts/main.py parse
+## Next steps
 
-# Step 3: Format and normalize
-python scripts/main.py format
-
-# Step 4: Validate
-python scripts/main.py validate
-```
-
-## Using Make Commands (Optional)
-
-If you prefer make:
-
-```bash
-# See all commands
-make help
-
-# Run pipeline
-make run
-
-# Individual steps
-make download
-make parse
-make format
-make validate
-
-# Utilities
-make test
-make check
-make stats
-```
-
-## Checking Output
-
-After running the pipeline:
-
-```bash
-# List generated files
-ls -lh final/
-
-# Check verse count
-python -c "
-import json
-with open('final/verses.json') as f:
-    verses = json.load(f)
-print(f'Total verses: {len(verses)}')
-"
-
-# View sample verse
-python -c "
-import json
-with open('final/verses.json') as f:
-    verses = json.load(f)
-print(json.dumps(verses[0], indent=2, ensure_ascii=False))
-"
-
-# Validate schema
-python scripts/validate_schema.py final/verses.json
-```
-
-## Expected Output Files
-
-After a successful run:
-
-```
-final/
-├── verses.json              # All normalized verses
-├── verses_enriched.json     # With metadata enrichment
-├── verses_deduped.json      # After deduplication
-└── metadata.json            # Corpus statistics
-```
-
-## Troubleshooting
-
-### Import Errors
-
-```bash
-# Activate virtual environment
-source venv/bin/activate
-
-# Or install globally
-pip install -r requirements.txt
-```
-
-### Download Failures
-
-```bash
-# Check internet connection
-ping github.com
-
-# Retry individual downloads
-python scripts/downloaders/download_github.py
-python scripts/downloaders/download_gutenberg.py
-python scripts/downloaders/download_sacred_texts.py
-```
-
-### Empty Output
-
-```bash
-# Check if sources were downloaded
-ls -la raw/
-
-# Check if parsing worked
-ls -la processed/
-
-# Re-run specific steps
-python scripts/main.py parse
-```
-
-### Permission Errors
-
-```bash
-# Make scripts executable
-chmod +x scripts/*.py
-chmod +x scripts/*/*.py
-
-# Or run with python explicitly
-python scripts/main.py run
-```
-
-## What's Next?
-
-1. **Explore the data**:
-   ```bash
-   # View statistics
-   cat final/metadata.json | python -m json.tool
-
-   # Search for specific texts
-   grep -i "bhagavad gita" final/verses.json | head
-   ```
-
-2. **Generate embeddings**:
-   - Use OpenAI's text-embedding-3-large
-   - Or sentence-transformers for local embeddings
-   - Save to `final/embeddings/`
-
-3. **Set up vector database**:
-   - Qdrant (recommended for local)
-   - Pinecone (cloud option)
-   - Weaviate (hybrid search)
-
-4. **Build RAG system**:
-   - Use LangChain or LlamaIndex
-   - Connect to Claude/GPT-4
-   - Implement hybrid search (BM25 + vector)
-
-## Resources
-
-- **Full Documentation**: `README.md`
-- **Plan Details**: Original plan document
-- **Test Suite**: `scripts/test_pipeline.py`
-- **Validation**: `scripts/validate_schema.py`
-
-## Getting Help
-
-If you encounter issues:
-
-1. Check the troubleshooting section above
-2. Review error messages in console output
-3. Verify prerequisites are installed
-4. Check file permissions
-5. Review the README for detailed documentation
-
-## Performance Tips
-
-- **Faster downloads**: Use `--parallel` flag (when implemented)
-- **Memory usage**: Process one tier at a time for large datasets
-- **Storage**: Clean intermediate files with `make clean`
-- **Speed**: Use SSD for better I/O performance
-
-## Example Commands
-
-```bash
-# Quick health check
-make check
-
-# Run tests only
-make test
-
-# Download and parse Bhagavad Gita only
-make download-github
-make parse-gita
-
-# Validate specific file
-python scripts/validate_schema.py final/verses_deduped.json
-
-# Clean and start fresh
-make clean
-make run
-```
-
----
-
-**Happy processing! 🕉️**
-
-For detailed documentation, see `README.md`
+- Read the architecture overview in [README.md](README.md).
+- Customize prompts in `scripts/rag/prompt_templates.py` and `english-v1-rag/prompt_templates.py`.
+- For the parallel English-only RAG (smaller corpus, fits in a free Qdrant tier), see [english-v1-rag/README.md](english-v1-rag/README.md).
