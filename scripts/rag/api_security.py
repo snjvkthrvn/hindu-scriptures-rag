@@ -4,11 +4,22 @@ from __future__ import annotations
 
 import hmac
 import os
+import re
 from typing import Any
+from urllib.parse import urlparse
 
 from flask import Request, current_app, has_request_context, jsonify
 
 from config import RAGConfig
+
+# Delimiters used to mark untrusted text in prompts. If a user's own text contained
+# the closing delimiter we'd let them break out of the sandbox, so we always neutralize
+# anything that looks like one before wrapping. Patterns are case-insensitive and
+# tolerate whitespace/extra angle brackets used by attackers to evade naive matching.
+_DELIMITER_BREAK = re.compile(
+    r"(?:<<<\s*UNTRUSTED_USER|UNTRUSTED_USER\s*>{2,}|<<<\s*TOOL_RESULT|TOOL_RESULT\s*>{2,}|<<<\s*END_TOOL_RESULT|END_TOOL_RESULT\s*>{2,})",
+    re.IGNORECASE,
+)
 
 
 class UserInputError(Exception):
@@ -85,12 +96,68 @@ def get_rate_limit_key(request: Request) -> str:
     return request.remote_addr or "local"
 
 
+def neutralize_prompt_delimiters(text: str) -> str:
+    """Replace any literal UNTRUSTED_USER / TOOL_RESULT delimiter inside untrusted text.
+
+    Without this, an attacker could paste the closing delimiter to break out of the
+    untrusted block and have what follows treated as system / developer instructions.
+    """
+    if not text:
+        return text
+    return _DELIMITER_BREAK.sub("[blocked]", text)
+
+
 def wrap_untrusted_user_text(text: str) -> str:
     """Mark user-supplied text so it is clearly boundary-separated from system instructions."""
     t = (text or "").strip()
     if t.startswith("<<<UNTRUSTED_USER"):
-        return text if text else ""
-    return f"<<<UNTRUSTED_USER\n{t}\nUNTRUSTED_USER>>>"
+        # Already wrapped (e.g. when re-loaded from history) — still scrub interior.
+        return neutralize_prompt_delimiters(text) if text else ""
+    safe = neutralize_prompt_delimiters(t)
+    return f"<<<UNTRUSTED_USER\n{safe}\nUNTRUSTED_USER>>>"
+
+
+def wrap_tool_result(name: str, text: str) -> str:
+    """Wrap tool output as data, not instructions, and scrub injection delimiters."""
+    safe_name = re.sub(r"[^A-Za-z0-9_]", "", (name or "tool"))[:48] or "tool"
+    body = neutralize_prompt_delimiters(text or "")
+    return f"<<<TOOL_RESULT name={safe_name}\n{body}\nEND_TOOL_RESULT>>>"
+
+
+def request_origin_matches_host(request: Request) -> bool:
+    """Light CSRF guard for cookie-authenticated JSON POSTs.
+
+    Browsers always send Origin (or at least Referer) on POST. Same-site requests have
+    Origin == request.host. If neither header is present (server-to-server, curl) we
+    return True — those callers should be using X-API-Key, which is checked separately.
+    Configure additional accepted origins via CORS_ORIGINS (already used for CORS).
+    """
+    origin = (request.headers.get("Origin") or "").strip()
+    referer = (request.headers.get("Referer") or "").strip()
+    src = origin or referer
+    if not src:
+        return True
+    try:
+        parsed = urlparse(src)
+    except ValueError:
+        return False
+    if not parsed.netloc:
+        return False
+    host_header = (request.host or "").lower()
+    if parsed.netloc.lower() == host_header:
+        return True
+    extra = (os.environ.get("CORS_ORIGINS") or "").strip()
+    if extra and extra != "*":
+        for entry in (e.strip() for e in extra.split(",")):
+            if not entry:
+                continue
+            try:
+                p = urlparse(entry)
+            except ValueError:
+                continue
+            if p.netloc.lower() == parsed.netloc.lower():
+                return True
+    return False
 
 
 def validate_and_prepare_question(
