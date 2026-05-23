@@ -100,3 +100,6 @@ Desktop.ini
 
 # Local scratch
 scripts/rag/_remote_prompts.txt
+
+# Static-HTML snapshots produced by scripts/clone_frontend.py (design review only)
+frontend-clone/
