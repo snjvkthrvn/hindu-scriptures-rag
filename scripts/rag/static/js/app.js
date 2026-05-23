@@ -166,7 +166,7 @@
     return "";
   }
   function tryMigrateLegacy() {
-    var keys = ["hs-conversations", "hs-conversations-main"];
+    var keys = ["hs-conversations"];
     for (var i = 0; i < keys.length; i++) {
       try {
         var raw = localStorage.getItem(keys[i]);
