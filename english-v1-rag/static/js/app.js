@@ -253,7 +253,7 @@
   /* ====================================================================
      Conversation persistence (localStorage for guests, server for logged-in)
      ==================================================================== */
-  var STORAGE_KEY = "hs-conversations" + (RAG_PREFIX ? "-main" : "");
+  var STORAGE_KEY = "hs-conversations" + (RAG_PREFIX ? "-" + RAG_PREFIX.replace(/^\/+/, "") : "");
   var MAX_STORED = 50;
 
   function applyMessagesToUI(data) {
