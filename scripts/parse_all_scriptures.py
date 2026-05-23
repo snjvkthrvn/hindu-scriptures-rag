@@ -76,9 +76,15 @@ def make_verse(
 
 
 def split_verses_by_marker(text):
-    """Split combined verse text by Devanagari verse markers like ॥1॥ or ॥१॥."""
-    # Match verse markers: ॥N॥ where N is Devanagari or ASCII digits
-    parts = re.split(r"॥\s*(\d+|[०-९]+)\s*॥", text)
+    """Split combined verse text by Devanagari verse markers.
+
+    Accepts both forms used across DharmicData:
+      - ॥ (U+096A single-char double-danda) — used by RV, AV, YV Kanva
+      - ।। (two U+0964 single dandas) — used by YV Madhyadina
+
+    Surrounding the verse number (ASCII or Devanagari digits).
+    """
+    parts = re.split(r"(?:॥|।।)\s*(\d+|[०-९]+)\s*(?:॥|।।)", text)
 
     verses = []
     # parts alternates: [text_before, verse_num, text_before, verse_num, ...]
@@ -240,7 +246,14 @@ def parse_bhagavad_gita(base_dir: Path) -> list[dict[str, Any]]:
 
 
 def parse_rigveda(base_dir: Path) -> list[dict[str, Any]]:
-    """Parse Rigveda. Each sukta has all verses in one text field."""
+    """Parse Rigveda. Each sukta has all verses in one text field.
+
+    Uses a running position counter per sukta for verse_num and id (instead of
+    the marker's stated number) — some long suktas like 1.164 switch to a
+    2-level marker scheme `॥3॥5॥` (anuvaka.verse) for later verses, which
+    collides on the anuvaka digit when read marker-first. The position counter
+    gives unique, sequential ids (1..N) matching Griffith's English numbering.
+    """
     verses = []
     rig_dir = base_dir / "raw" / "dharmicdata" / "Rigveda"
     if not rig_dir.exists():
@@ -256,14 +269,16 @@ def parse_rigveda(base_dir: Path) -> list[dict[str, Any]]:
                 sukta = sukta_data.get("sukta", 0)
                 text = sukta_data.get("text", "")
 
-                for verse_num, verse_text in split_verses_by_marker(text):
+                for position, (_marker_num, verse_text) in enumerate(
+                    split_verses_by_marker(text), start=1
+                ):
                     verses.append(
                         make_verse(
-                            f"rv_{mandala}_{sukta}_{verse_num}",
+                            f"rv_{mandala}_{sukta}_{position}",
                             "Rigveda",
                             mandala,
                             f"Mandala {mandala}",
-                            verse_num,
+                            position,
                             verse_text,
                             category="shruti",
                             tradition="vedic",
@@ -278,7 +293,11 @@ def parse_rigveda(base_dir: Path) -> list[dict[str, Any]]:
 
 
 def parse_atharvaveda(base_dir: Path) -> list[dict[str, Any]]:
-    """Parse Atharvaveda. Each sukta has all verses in one text field."""
+    """Parse Atharvaveda. Each sukta has all verses in one text field.
+
+    Same running-counter approach as parse_rigveda — see that function's
+    docstring for rationale.
+    """
     verses = []
     av_dir = base_dir / "raw" / "dharmicdata" / "AtharvaVeda"
     if not av_dir.exists():
@@ -294,14 +313,16 @@ def parse_atharvaveda(base_dir: Path) -> list[dict[str, Any]]:
                 sukta = sukta_data.get("sukta", 0)
                 text = sukta_data.get("text", "")
 
-                for verse_num, verse_text in split_verses_by_marker(text):
+                for position, (_marker_num, verse_text) in enumerate(
+                    split_verses_by_marker(text), start=1
+                ):
                     verses.append(
                         make_verse(
-                            f"av_{kaanda}_{sukta}_{verse_num}",
+                            f"av_{kaanda}_{sukta}_{position}",
                             "Atharvaveda",
                             kaanda,
                             f"Kaanda {kaanda}",
-                            verse_num,
+                            position,
                             verse_text,
                             category="shruti",
                             tradition="vedic",
@@ -316,27 +337,47 @@ def parse_atharvaveda(base_dir: Path) -> list[dict[str, Any]]:
 
 
 def parse_yajurveda(base_dir: Path) -> list[dict[str, Any]]:
-    """Parse Yajurveda. Each adhyaya has all verses in one text field."""
+    """Parse Yajurveda. Handles both recensions of the White Yajurveda in
+    DharmicData (Madhyadina uses "adhyaya" key; Kanva uses "chapter" key).
+    Ids carry a samhita tag so verses from different recensions with the same
+    (adhyaya, verse) don't collide.
+    """
     verses = []
     yv_dir = base_dir / "raw" / "dharmicdata" / "Yajurveda"
     if not yv_dir.exists():
         return verses
 
+    # Madhyadina is the canonical Shukla Yajurveda. Kanva is an alternate-school
+    # variant whose source markers reset numbering within each chapter, producing
+    # ~364 duplicate (chapter, verse) keys. Dropping it keeps the corpus clean;
+    # to re-enable, remove the skip and add a running-counter id strategy.
+    SKIP_FILES = {"vajasneyi_kanva_samhita_chapters"}
+    samhita_tags = {
+        "vajasneyi_madhyadina_samhita": "madhyadina",
+    }
+
     for yv_file in sorted(yv_dir.glob("*.json")):
+        if yv_file.stem in SKIP_FILES:
+            continue
         try:
             with open(yv_file, encoding="utf-8") as f:
                 data = json.load(f)
 
-            samhita_name = yv_file.stem  # e.g. vajasneyi_madhyadina_samhita
+            samhita_name = yv_file.stem
+            samhita_tag = samhita_tags.get(samhita_name, samhita_name)
 
             for chapter_data in data:
-                adhyaya = chapter_data.get("adhyaya", 0)
+                adhyaya = (
+                    chapter_data.get("adhyaya")
+                    if chapter_data.get("adhyaya") is not None
+                    else chapter_data.get("chapter", 0)
+                )
                 text = chapter_data.get("text", "")
 
                 for verse_num, verse_text in split_verses_by_marker(text):
                     verses.append(
                         make_verse(
-                            f"yv_{adhyaya}_{verse_num}",
+                            f"yv_{samhita_tag}_{adhyaya}_{verse_num}",
                             "Yajurveda",
                             adhyaya,
                             f"Adhyaya {adhyaya}",
