@@ -77,7 +77,7 @@ ROMAN_VALUES = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100}
 
 def roman_to_int(s: str) -> int | None:
     s = s.upper()
-    if not all(c in ROMAN_VALUES for c in s):
+    if not s or not all(c in ROMAN_VALUES for c in s):
         return None
     total = 0
     for i, ch in enumerate(s):
@@ -85,6 +85,47 @@ def roman_to_int(s: str) -> int | None:
         nxt = ROMAN_VALUES.get(s[i + 1]) if i + 1 < len(s) else 0
         total += -v if nxt > v else v
     return total
+
+
+def parse_ocr_roman(s: str, expected_range: tuple[int, int] = (1, 40)) -> int | None:
+    """Roman numeral parsing with OCR-aware fallbacks.
+
+    Tries common OCR-confused substitutions (trailing L→I, T→I, H→II, F→I,
+    lowercase l→I) and returns the first interpretation that's a valid Roman
+    in expected_range. Used because Griffith YV OCR mangles many BOOK
+    numerals: XIIL→XIII, VIIL→VIII, XIT→XII, XVH→XVII, XXXTT→XXXII, etc.
+    """
+    if not s:
+        return None
+    s = re.sub(r"[^A-Za-z]", "", s).upper()
+    if not s:
+        return None
+    lo, hi = expected_range
+    # Try literal first
+    n = roman_to_int(s)
+    if n is not None and lo <= n <= hi:
+        return n
+    # Build OCR-aware variants
+    variants = {s}
+    if s.endswith("L"):
+        variants.add(s[:-1] + "I")
+    if "T" in s:
+        variants.add(s.replace("T", "I"))
+    if "H" in s:
+        variants.add(s.replace("H", "II"))
+    if "F" in s:
+        variants.add(s.replace("F", "I"))
+    # Composite: T→I AND trailing L→I
+    if s.endswith("L") and "T" in s:
+        variants.add(s[:-1].replace("T", "I") + "I")
+    # Prefer the smallest valid interpretation in range (cleaner OCR fix)
+    candidates = sorted(
+        {roman_to_int(v) for v in variants if roman_to_int(v) is not None}
+    )
+    for n in candidates:
+        if lo <= n <= hi:
+            return n
+    return None
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -118,12 +159,15 @@ def find_translation_start(text: str) -> int:
 
 
 def split_into_books(body: str) -> list[tuple[int, str]]:
-    """Yield (book_num, book_text) pairs from the translation body."""
-    # Find all book-marker positions
+    """Yield (book_num, book_text) pairs from the translation body.
+
+    Uses parse_ocr_roman() so OCR-mangled markers (BOOR XIIL., BOOK XIT.,
+    BOOK XVH., etc.) resolve to their intended adhyaya number.
+    """
     markers = list(BOOK_MARKER_RE.finditer(body))
     books: list[tuple[int, str]] = []
     for i, m in enumerate(markers):
-        num = roman_to_int(m.group(1))
+        num = parse_ocr_roman(m.group(1))
         if num is None:
             continue
         start = m.end()
