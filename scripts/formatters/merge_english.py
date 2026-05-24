@@ -44,6 +44,7 @@ EXTRA_ENG_SOURCES = [
     PROJECT_ROOT / "raw" / "wikisource" / "yajurveda_griffith.json",
     PROJECT_ROOT / "raw" / "wikisource" / "ramcharitmanas_hill.json",
     PROJECT_ROOT / "raw" / "wikisource" / "vedanta_classics.json",
+    PROJECT_ROOT / "raw" / "wikisource" / "itihasa_dutt.json",
 ]
 
 # Sources where recension/numbering disagrees between the two corpora — leaving
