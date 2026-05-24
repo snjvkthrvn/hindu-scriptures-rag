@@ -34,6 +34,17 @@ MAIN_FILE = PROJECT_ROOT / "final" / "verses_enriched.json"
 ENG_FILE = PROJECT_ROOT / "english-v1-rag" / "verses_english_only.json"
 BACKUP_FILE = MAIN_FILE.with_suffix(".json.bak")
 
+# Additional English source files merged on top of ENG_FILE when present.
+# Each holds a flat list of verse records in the same shape as ENG_FILE
+# (id, source.text/chapter/chapter_name/verse, content.translation). Files
+# are silently skipped when absent — they're produced on demand by the
+# scripts/downloaders/download_wikisource_*.py scripts.
+EXTRA_ENG_SOURCES = [
+    PROJECT_ROOT / "raw" / "wikisource" / "atharvaveda_whitney.json",
+    PROJECT_ROOT / "raw" / "wikisource" / "yajurveda_griffith.json",
+    PROJECT_ROOT / "raw" / "wikisource" / "ramcharitmanas_hill.json",
+]
+
 # Sources where recension/numbering disagrees between the two corpora — leaving
 # these alone avoids associating wrong English with Sanskrit verses.
 SKIP_SOURCES = {
@@ -130,7 +141,19 @@ def main() -> int:
 
     print(f"Loading English-only corpus from {ENG_FILE.relative_to(PROJECT_ROOT)} ...")
     eng_verses = json.loads(ENG_FILE.read_text(encoding="utf-8"))
+    for v in eng_verses:
+        v["_origin_file"] = str(ENG_FILE.relative_to(PROJECT_ROOT)).replace("\\", "/")
     print(f"  {len(eng_verses):,} verses")
+
+    for extra_path in EXTRA_ENG_SOURCES:
+        if not extra_path.exists():
+            continue
+        extra = json.loads(extra_path.read_text(encoding="utf-8"))
+        rel = str(extra_path.relative_to(PROJECT_ROOT)).replace("\\", "/")
+        for v in extra:
+            v["_origin_file"] = rel
+        print(f"  + {rel}: {len(extra):,} verses")
+        eng_verses.extend(extra)
 
     idx = build_index(eng_verses)
     print(f"  index: {len(idx['by_id']):,} by id, {len(idx['by_key']):,} compound keys")
@@ -154,7 +177,14 @@ def main() -> int:
         content["translation"] = match["content"]["translation"]
         prov = v.setdefault("provenance", {})
         prov["translation_source_text"] = match["source"].get("text", "")
-        prov["translation_source_file"] = "english-v1-rag/verses_english_only.json"
+        prov["translation_source_file"] = match.get(
+            "_origin_file", "english-v1-rag/verses_english_only.json"
+        )
+        # Carry through translator info when the english record provides it
+        match_prov = match.get("provenance") or {}
+        for k in ("translator", "translation_year"):
+            if k in match_prov:
+                prov[f"translation_{k}"] = match_prov[k]
         added[v["source"].get("text", "?")] += 1
 
     print()
