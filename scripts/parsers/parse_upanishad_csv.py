@@ -150,12 +150,16 @@ class UpanishadCSVParser:
                     if not sanskrit:
                         continue
 
-                    try:
-                        verse_num_int = int(verse_num)
-                    except (ValueError, TypeError):
-                        # Extract first number from "।। 1.1.1 ।।" or "1.1.2" format
-                        match = re.search(r"(\d+)", str(verse_num))
-                        verse_num_int = int(match.group(1)) if match else row_idx
+                    # Source CSVs label verses hierarchically (e.g. "1.1.2",
+                    # "1.2.1"); each component repeats across khandas/chapters,
+                    # so collapsing to any single component (first OR last digit)
+                    # produces duplicate ids — the first verse of every khanda
+                    # becomes "_1". Number sequentially within each Upanishad
+                    # (1..N in file order) instead. This guarantees unique ids
+                    # AND matches the flat per-Upanishad numbering used by the
+                    # English corpus (verses_english_only.json), so merge_english
+                    # aligns each translation to the correct verse.
+                    verse_num_int = len(verses) + 1
 
                     verse_id = f"upanishad_{title.lower().replace(' ', '_')}_{verse_num_int}"
 

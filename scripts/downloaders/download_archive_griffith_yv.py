@@ -70,7 +70,8 @@ def fetch_djvu() -> str:
 
 
 # ────────────────────────────────────────────────────────────────────────────
-# Roman numerals
+# ────────────────────────────────────────────────────────────────────────────
+# Roman numerals and English Ordinals
 
 ROMAN_VALUES = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100}
 
@@ -87,54 +88,47 @@ def roman_to_int(s: str) -> int | None:
     return total
 
 
-def parse_ocr_roman(s: str, expected_range: tuple[int, int] = (1, 40)) -> int | None:
-    """Roman numeral parsing with OCR-aware fallbacks.
+ORDINALS_MAP = {
+    "FIRST": 1, "SECOND": 2, "THIRD": 3, "FOURTH": 4, "FIFTH": 5, "SIXTH": 6, "SEVENTH": 7, "EIGHTH": 8, "NINTH": 9, "TENTH": 10,
+    "ELEVENTH": 11, "TWELFTH": 12, "THIRTEENTH": 13, "FOURTEENTH": 14, "FIFTEENTH": 15, "SIXTEENTH": 16, "SEVENTEENTH": 17,
+    "EIGHTEENTH": 18, "NINETEENTH": 19, "TWENTIETH": 20, "TWENTYFIRST": 21, "TWENTYSECOND": 22, "TWENTYTHIRD": 23, "TWENTYTHIR": 23, "TWENTYTHIRI": 23,
+    "TWENTYFOURTH": 24, "TWENTYFOUKTB": 24, "TWENTYFIFTH": 25, "TWENTYSIXTH": 26, "TWENTYSEVENTH": 27, "TWENTYEIGHTH": 28, "TWENTYNINTH": 29,
+    "THIRTIETH": 30, "THIRTYFIRST": 31, "THIRTYSECOND": 32, "THIRTY SECOND": 32, "THIRTYTHIRD": 33, "THIRTYFOURTH": 34, "THIRTYPOURTTF": 34, "THIRTYPOURTT": 34,
+    "THIRTYFIFTH": 35, "THIRTYSIXTH": 36, "THIRTYSEVENTH": 37, "THIRTYSSEVENTH": 37, "THIRTYEIGHTH": 38, "THIRTYEIRGFRTF": 38, "THIRTYEIRGF": 38, "THIRTYNINTH": 39, "FORTIETH": 40
+}
 
-    Tries common OCR-confused substitutions (trailing L→I, T→I, H→II, F→I,
-    lowercase l→I) and returns the first interpretation that's a valid Roman
-    in expected_range. Used because Griffith YV OCR mangles many BOOK
-    numerals: XIIL→XIII, VIIL→VIII, XIT→XII, XVH→XVII, XXXTT→XXXII, etc.
-    """
-    if not s:
-        return None
-    s = re.sub(r"[^A-Za-z]", "", s).upper()
-    if not s:
-        return None
-    lo, hi = expected_range
-    # Try literal first
-    n = roman_to_int(s)
-    if n is not None and lo <= n <= hi:
-        return n
-    # Build OCR-aware variants
-    variants = {s}
-    if s.endswith("L"):
-        variants.add(s[:-1] + "I")
-    if "T" in s:
-        variants.add(s.replace("T", "I"))
-    if "H" in s:
-        variants.add(s.replace("H", "II"))
-    if "F" in s:
-        variants.add(s.replace("F", "I"))
-    # Composite: T→I AND trailing L→I
-    if s.endswith("L") and "T" in s:
-        variants.add(s[:-1].replace("T", "I") + "I")
-    # Prefer the smallest valid interpretation in range (cleaner OCR fix)
-    candidates = sorted(
-        {roman_to_int(v) for v in variants if roman_to_int(v) is not None}
-    )
-    for n in candidates:
-        if lo <= n <= hi:
-            return n
+
+def parse_roman_or_word(word: str) -> int | None:
+    """Parse Roman numerals or English ordinals (with common OCR mistakes)."""
+    word = word.strip().upper()
+    norm_word = re.sub(r"[^A-Z]", "", word)
+    
+    # 1. Check exact match
+    if norm_word in ORDINALS_MAP:
+        return ORDINALS_MAP[norm_word]
+        
+    # 2. Check if any ordinal is a substring (longest first)
+    for ord_name in sorted(ORDINALS_MAP.keys(), key=len, reverse=True):
+        if ord_name in norm_word:
+            return ORDINALS_MAP[ord_name]
+            
+    # 3. Check Roman numerals
+    roman_clean = re.sub(r"[^A-Z]", "", word)
+    val = roman_to_int(roman_clean)
+    if val and 1 <= val <= 40:
+        return val
+        
     return None
 
 
 # ────────────────────────────────────────────────────────────────────────────
 # Content extraction
 
-# Match BOOK markers. Allow common OCR drift in the word "BOOK":
-#   BOOK / BOOR (R for K) / BOOR. / B00K (0 for O)
-# Roman numerals follow, terminated by a period.
-BOOK_MARKER_RE = re.compile(r"\bBO[O0][KR]\s+([IVXLC]+)\s*\.", re.IGNORECASE)
+# Match pattern for book headers, restricting the first word to variations of BOOK.
+BOOK_MARKER_RE = re.compile(
+    r"^\s*(?:BOOK|BOOR|B00K|BOOE|BOOS|B00R|ftJOK|ftOOK|fiOOK|book)\s+(?:THE\s+|THK\s+|TFEIE\s+|TfeIE\s+|TfeiE\s+)?([A-Za-z\- \d_<>»\.\']+)",
+    re.IGNORECASE | re.MULTILINE
+)
 
 # A verse start: line containing only optional whitespace then digits then
 # whitespace then a capitalised word. We require multi-line aggregation
@@ -147,39 +141,50 @@ def find_translation_start(text: str) -> int:
 
     The TOC also has "BOOK I." entries, but each is followed by chapter-name
     lines + page numbers, not by a numbered verse. The translation start is
-    the FIRST "BOOK I." followed within 800 chars by a verse-shaped line.
+    the FIRST "BOOK I." (or equivalent first book marker) after the TOC (char 30,000).
     """
     for m in BOOK_MARKER_RE.finditer(text):
-        if m.group(1).upper() != "I":
+        # Filter page headers
+        line_start = text.rfind('\n', 0, m.start()) + 1
+        line = text[line_start:m.end()]
+        if '[' in line or ']' in line:
             continue
-        after = text[m.end():m.end() + 1500]
-        if VERSE_START_RE.search(after):
+            
+        num = parse_roman_or_word(m.group(1))
+        if num == 1 and m.start() > 30000:
             return m.start()
     return -1
 
 
-def split_into_books(body: str) -> list[tuple[int, str]]:
-    """Yield (book_num, book_text) pairs from the translation body.
-
-    Uses parse_ocr_roman() so OCR-mangled markers (BOOR XIIL., BOOK XIT.,
-    BOOK XVH., etc.) resolve to their intended adhyaya number.
-    """
-    markers = list(BOOK_MARKER_RE.finditer(body))
-    books: list[tuple[int, str]] = []
-    for i, m in enumerate(markers):
-        num = parse_ocr_roman(m.group(1))
-        if num is None:
+def split_into_books(text: str, start_offset: int) -> list[tuple[int, str]]:
+    """Find the start offsets of all 40 books and extract their text sections."""
+    markers = list(BOOK_MARKER_RE.finditer(text))
+    found_books: dict[int, int] = {}
+    for m in markers:
+        # Ignore page headers
+        line_start = text.rfind('\n', 0, m.start()) + 1
+        line = text[line_start:m.end()]
+        if '[' in line or ']' in line:
             continue
-        start = m.end()
-        end = markers[i + 1].start() if i + 1 < len(markers) else len(body)
-        books.append((num, body[start:end]))
-    # Deduplicate: keep the LONGEST text per book number (sometimes a page
-    # header re-introduces "BOOK I." mid-content, splitting a real book)
-    by_num: dict[int, str] = {}
-    for num, txt in books:
-        if num not in by_num or len(txt) > len(by_num[num]):
-            by_num[num] = txt
-    return sorted(by_num.items())
+        
+        num = parse_roman_or_word(m.group(1))
+        if num is not None and 1 <= num <= 40:
+            if m.start() >= start_offset:
+                if num not in found_books:
+                    found_books[num] = m.start()
+
+    # Ensure Book 1 starts at start_offset
+    found_books[1] = start_offset
+
+    # Slice sections
+    books: list[tuple[int, str]] = []
+    sorted_nums = sorted(found_books.keys())
+    for i, b in enumerate(sorted_nums):
+        start = found_books[b]
+        end = found_books[sorted_nums[i + 1]] if i + 1 < len(sorted_nums) else len(text)
+        books.append((b, text[start:end]))
+        
+    return books
 
 
 _PAGE_HEADER_RE = re.compile(r"\[BO[O0][KR]\s+[IVXLC]+", re.IGNORECASE)
@@ -276,8 +281,7 @@ def main() -> int:
         return 1
     print(f"  Translation body starts at char {start:,}")
 
-    body = text[start:]
-    books = split_into_books(body)
+    books = split_into_books(text, start)
     print(f"  Detected {len(books)} books in translation body")
 
     all_records: list[dict] = []

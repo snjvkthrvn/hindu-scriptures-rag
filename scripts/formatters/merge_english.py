@@ -171,7 +171,9 @@ def main() -> int:
     added: dict[str, int] = defaultdict(int)
     for v in main_verses:
         content = v.setdefault("content", {})
-        if (content.get("translation") or "").strip():
+        translation = (content.get("translation") or "").strip()
+        sanskrit = (content.get("sanskrit") or "").strip()
+        if translation and translation != sanskrit:
             continue
         match = find_english(v, idx)
         if not match:
