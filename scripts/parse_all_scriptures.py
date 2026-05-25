@@ -15,6 +15,7 @@ Handles:
 import json
 import re
 import sys
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -73,6 +74,30 @@ def make_verse(
         "commentaries": commentaries or [],
         "provenance": {**PROVENANCE_DHARMICDATA, "processed_date": datetime.now().isoformat()},
     }
+
+
+def disambiguate_id(base_id: str, seen: set[str]) -> str:
+    """Return base_id, or base_id with a letter suffix (b, c, ...) if it
+    has already been emitted in this parser run.
+
+    Used where the *source data* contains different verses sharing a
+    canonical reference (e.g. Aranya Kāṇḍa Sarga 34 in Valmiki Ramayana
+    has two distinct shlokas both numbered 1..26 in the raw JSON; YV
+    Madhyadina adhyaya 6 has two verse-(2) markers in its combined text).
+    Lettered suffixes preserve the canonical reference while making the
+    ID Qdrant-safe.
+    """
+    if base_id not in seen:
+        seen.add(base_id)
+        return base_id
+    # 'b' is the first disambiguator (so the original keeps its bare ID).
+    for suffix_ord in range(ord("b"), ord("z") + 1):
+        candidate = f"{base_id}{chr(suffix_ord)}"
+        if candidate not in seen:
+            seen.add(candidate)
+            return candidate
+    # Vanishingly unlikely: more than 25 collisions on the same ID.
+    raise RuntimeError(f"More than 25 collisions on {base_id!r}; source data is pathological")
 
 
 def split_verses_by_marker(text):
@@ -356,6 +381,7 @@ def parse_yajurveda(base_dir: Path) -> list[dict[str, Any]]:
         "vajasneyi_madhyadina_samhita": "madhyadina",
     }
 
+    seen_ids: set[str] = set()
     for yv_file in sorted(yv_dir.glob("*.json")):
         if yv_file.stem in SKIP_FILES:
             continue
@@ -375,9 +401,15 @@ def parse_yajurveda(base_dir: Path) -> list[dict[str, Any]]:
                 text = chapter_data.get("text", "")
 
                 for verse_num, verse_text in split_verses_by_marker(text):
+                    # YV adhyaya text occasionally contains the same verse
+                    # marker twice (e.g. adhyaya 6 has two `॥२॥`); disambiguate
+                    # rather than overwrite in Qdrant.
+                    verse_id = disambiguate_id(
+                        f"yv_{samhita_tag}_{adhyaya}_{verse_num}", seen_ids
+                    )
                     verses.append(
                         make_verse(
-                            f"yv_{samhita_tag}_{adhyaya}_{verse_num}",
+                            verse_id,
                             "Yajurveda",
                             adhyaya,
                             f"Adhyaya {adhyaya}",
@@ -565,6 +597,7 @@ def parse_valmiki_ramayana(base_dir: Path) -> list[dict[str, Any]]:
         "uttarakanda": 7,
     }
 
+    seen_ids: set[str] = set()
     for rama_file in sorted(rama_dir.glob("*.json")):
         try:
             with open(rama_file, encoding="utf-8") as f:
@@ -582,9 +615,15 @@ def parse_valmiki_ramayana(base_dir: Path) -> list[dict[str, Any]]:
                 kanda_num = kanda_order.get(kaanda, 0)
                 kanda_display = kanda_names.get(kaanda, kaanda)
 
+                # Upstream JSON has duplicate (kaanda, sarg, shloka) keys with
+                # distinct text in Aranya Sarga 34 (26 dups) and Kishkindha
+                # Sarga 10 (35 dups); disambiguate rather than overwrite.
+                verse_id = disambiguate_id(
+                    f"vr_{kanda_num}_{sarg}_{shloka}", seen_ids
+                )
                 verses.append(
                     make_verse(
-                        f"vr_{kanda_num}_{sarg}_{shloka}",
+                        verse_id,
                         "Valmiki Ramayana",
                         kanda_num,
                         kanda_display,
@@ -629,6 +668,7 @@ def parse_ramcharitmanas(base_dir: Path) -> list[dict[str, Any]]:
         "उत्तरकाण्ड": "Uttara Kanda",
     }
 
+    unknown_kaand_files: set[str] = set()
     for rcm_file in sorted(rcm_dir.glob("*_data.json")):
         try:
             with open(rcm_file, encoding="utf-8") as f:
@@ -642,8 +682,16 @@ def parse_ramcharitmanas(base_dir: Path) -> list[dict[str, Any]]:
                 if not content:
                     continue
 
-                kanda_num = kanda_order.get(kaand, 0)
-                kanda_en = kanda_english.get(kaand, kaand)
+                # Source files use both "बालकाण्ड" and "अयोध्या काण्ड" (with
+                # internal whitespace). Strip all whitespace before lookup so
+                # both forms resolve. Without this, 6 of 7 files miss the
+                # lookup, all kaand=2..7 verses collide on `rcm_0_{idx}`, and
+                # ~823 verses are silently overwritten in Qdrant.
+                kaand_key = re.sub(r"\s+", "", kaand)
+                kanda_num = kanda_order.get(kaand_key, 0)
+                kanda_en = kanda_english.get(kaand_key, kaand)
+                if kanda_num == 0 and kaand:
+                    unknown_kaand_files.add(f"{rcm_file.name}:{kaand!r}")
 
                 verses.append(
                     make_verse(
@@ -661,6 +709,13 @@ def parse_ramcharitmanas(base_dir: Path) -> list[dict[str, Any]]:
                 )
         except Exception as e:
             print(f"  Error: {rcm_file.name}: {e}")
+
+    if unknown_kaand_files:
+        print(
+            f"  WARNING: {len(unknown_kaand_files)} Ramcharitmanas entries "
+            f"had unrecognised kaand values (kanda_num=0 fallback): "
+            f"{sorted(unknown_kaand_files)[:5]}"
+        )
 
     return verses
 
@@ -723,6 +778,22 @@ def main():
         except Exception as e:
             print(f"  -> ERROR: {e}")
             results[name] = 0
+
+    # Invariant: no duplicate verse IDs. Qdrant uses verse_id as the point
+    # key (indexer.py:211, hashed in vector_store.py:126), so duplicates
+    # silently overwrite — there is no second chance to catch this at
+    # reindex time. Failing loudly here is the only place a parser-level
+    # ID collision is recoverable cheaply.
+    id_counts = Counter(v["id"] for v in all_verses)
+    dups = {vid: c for vid, c in id_counts.items() if c > 1}
+    if dups:
+        extras = sum(c - 1 for c in dups.values())
+        sample = list(dups.items())[:10]
+        raise AssertionError(
+            f"Duplicate verse IDs would silently overwrite in Qdrant: "
+            f"{len(dups)} colliding IDs, {extras} extra records. "
+            f"Sample: {sample}"
+        )
 
     # Save output
     output_file = base_dir / "final" / "verses.json"
