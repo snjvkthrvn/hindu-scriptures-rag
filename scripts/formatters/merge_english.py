@@ -34,6 +34,19 @@ MAIN_FILE = PROJECT_ROOT / "final" / "verses_enriched.json"
 ENG_FILE = PROJECT_ROOT / "english-v1-rag" / "verses_english_only.json"
 BACKUP_FILE = MAIN_FILE.with_suffix(".json.bak")
 
+# Additional English source files merged on top of ENG_FILE when present.
+# Each holds a flat list of verse records in the same shape as ENG_FILE
+# (id, source.text/chapter/chapter_name/verse, content.translation). Files
+# are silently skipped when absent — they're produced on demand by the
+# scripts/downloaders/download_wikisource_*.py scripts.
+EXTRA_ENG_SOURCES = [
+    PROJECT_ROOT / "raw" / "wikisource" / "atharvaveda_whitney.json",
+    PROJECT_ROOT / "raw" / "wikisource" / "yajurveda_griffith.json",
+    PROJECT_ROOT / "raw" / "wikisource" / "ramcharitmanas_hill.json",
+    PROJECT_ROOT / "raw" / "wikisource" / "vedanta_classics.json",
+    PROJECT_ROOT / "raw" / "wikisource" / "itihasa_dutt.json",
+]
+
 # Sources where recension/numbering disagrees between the two corpora — leaving
 # these alone avoids associating wrong English with Sanskrit verses.
 SKIP_SOURCES = {
@@ -130,7 +143,19 @@ def main() -> int:
 
     print(f"Loading English-only corpus from {ENG_FILE.relative_to(PROJECT_ROOT)} ...")
     eng_verses = json.loads(ENG_FILE.read_text(encoding="utf-8"))
+    for v in eng_verses:
+        v["_origin_file"] = str(ENG_FILE.relative_to(PROJECT_ROOT)).replace("\\", "/")
     print(f"  {len(eng_verses):,} verses")
+
+    for extra_path in EXTRA_ENG_SOURCES:
+        if not extra_path.exists():
+            continue
+        extra = json.loads(extra_path.read_text(encoding="utf-8"))
+        rel = str(extra_path.relative_to(PROJECT_ROOT)).replace("\\", "/")
+        for v in extra:
+            v["_origin_file"] = rel
+        print(f"  + {rel}: {len(extra):,} verses")
+        eng_verses.extend(extra)
 
     idx = build_index(eng_verses)
     print(f"  index: {len(idx['by_id']):,} by id, {len(idx['by_key']):,} compound keys")
@@ -146,7 +171,9 @@ def main() -> int:
     added: dict[str, int] = defaultdict(int)
     for v in main_verses:
         content = v.setdefault("content", {})
-        if (content.get("translation") or "").strip():
+        translation = (content.get("translation") or "").strip()
+        sanskrit = (content.get("sanskrit") or "").strip()
+        if translation and translation != sanskrit:
             continue
         match = find_english(v, idx)
         if not match:
@@ -154,8 +181,59 @@ def main() -> int:
         content["translation"] = match["content"]["translation"]
         prov = v.setdefault("provenance", {})
         prov["translation_source_text"] = match["source"].get("text", "")
-        prov["translation_source_file"] = "english-v1-rag/verses_english_only.json"
+        prov["translation_source_file"] = match.get(
+            "_origin_file", "english-v1-rag/verses_english_only.json"
+        )
+        # Carry through translator info when the english record provides it
+        match_prov = match.get("provenance") or {}
+        for k in ("translator", "translation_year"):
+            if k in match_prov:
+                prov[f"translation_{k}"] = match_prov[k]
         added[v["source"].get("text", "?")] += 1
+
+    # Append entirely new entries — english records whose id is not in main
+    # corpus get added as new corpus entries (English-only, empty Sanskrit).
+    # This lets us ingest Wikisource texts that aren't represented in
+    # DharmicData (e.g. Ashtavakra Gita, Vivekachudamani, etc.).
+    main_ids = {v.get("id") for v in main_verses if v.get("id")}
+    appended_by_source: dict[str, int] = defaultdict(int)
+    for v in eng_verses:
+        vid = v.get("id")
+        if not vid or vid in main_ids:
+            continue
+        translation = ((v.get("content") or {}).get("translation") or "").strip()
+        if not translation:
+            continue
+        src_text = v["source"].get("text", "")
+        # Skip if the source name (after normalisation) already exists in the
+        # main corpus — those should land via the per-verse merge above, not
+        # as duplicate entries. e.g. "Rig Veda" → "Rigveda" (already present);
+        # "<X> Upanishad (Claude)" → "<X> Upanishad" (present); same for the
+        # Arnold Gita. Keeps appended set to genuinely new sources.
+        if normalise_source(src_text) in before_total:
+            continue
+        new_verse = {
+            "id": vid,
+            "source": v.get("source", {}),
+            "content": {
+                "sanskrit": (v.get("content") or {}).get("sanskrit", ""),
+                "transliteration": "",
+                "translation": translation,
+                "translations": {},
+                "word_by_word": {},
+            },
+            "metadata": v.get("metadata") or {},
+            "commentaries": [],
+            "provenance": {
+                **(v.get("provenance") or {}),
+                "translation_source_file": v.get("_origin_file", "unknown"),
+            },
+        }
+        # Drop the temporary _origin_file tag from the embedded record
+        new_verse["source"] = {k: vw for k, vw in v["source"].items()}
+        main_verses.append(new_verse)
+        main_ids.add(vid)
+        appended_by_source[src_text] += 1
 
     print()
     print(f"{'Source':<40} {'verses':>7} {'before':>7} {'added':>7} {'after':>7} {'after %':>8}")
@@ -174,6 +252,14 @@ def main() -> int:
     ta = sum(added.values())
     print("-" * 82)
     print(f"{'TOTAL':<40} {tot:>7} {tb:>7} {ta:>7} {tb + ta:>7} {100 * (tb + ta) / tot:>7.2f}%")
+
+    # Report appended new sources
+    if appended_by_source:
+        print()
+        print("New sources appended (English-only entries, not in main corpus):")
+        for src, n in sorted(appended_by_source.items()):
+            print(f"  + {src:<35} {n:>5} verses")
+        print(f"  Corpus now has {len(main_verses):,} verses total ({sum(appended_by_source.values())} new).")
 
     if not BACKUP_FILE.exists():
         print(f"\nBacking up original → {BACKUP_FILE.name}")
