@@ -107,6 +107,28 @@ class QdrantStore:
         info = self.client.get_collection(self.collection)
         return info.points_count
 
+    def count_exact(self, query_filter: models.Filter | None = None) -> int:
+        """Return an exact point count, optionally filtered by payload."""
+        result = self.client.count(
+            collection_name=self.collection,
+            count_filter=query_filter,
+            exact=True,
+        )
+        return result.count
+
+    def count_by_chunk_type(self, chunk_type: str) -> int:
+        """Return exact count for verse/commentary chunks."""
+        return self.count_exact(
+            models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="chunk_type",
+                        match=models.MatchValue(value=chunk_type),
+                    )
+                ]
+            )
+        )
+
     def upsert_batch(
         self,
         ids: list[str],

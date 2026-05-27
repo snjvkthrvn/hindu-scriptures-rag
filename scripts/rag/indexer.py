@@ -1,7 +1,7 @@
 """One-time indexer: chunk verses → embed via Cohere → insert into Qdrant.
 
 Verse-native chunking strategy:
-  - Verse chunk: embed translation/transliteration, store full verse + sanskrit
+  - Verse chunk: embed Sanskrit + transliteration + translation, store full verse
   - Commentary chunk: one per commentary entry, linked to parent verse_id
 
 Supports --resume to continue from where a previous run was interrupted.
@@ -17,6 +17,7 @@ from pathlib import Path
 
 from config import PROJECT_ROOT, RAGConfig
 from embeddings import CohereEmbedder
+from text_normalization import build_sparse_text
 from tqdm import tqdm
 from vector_store import QdrantStore
 
@@ -29,20 +30,20 @@ def _checkpoint_file(config: RAGConfig) -> Path:
 
 
 def build_embeddable_text(verse: dict) -> str:
-    """Build text for embedding. Priority: translation > transliteration > sanskrit."""
+    """Build Sanskrit-first text for embedding."""
     content = verse.get("content", {})
-    translation = content.get("translation", "").strip()
-    transliteration = content.get("transliteration", "").strip()
     sanskrit = content.get("sanskrit", "").strip()
+    transliteration = content.get("transliteration", "").strip()
+    translation = content.get("translation", "").strip()
 
-    primary = translation or transliteration or sanskrit
-    if not primary:
+    primary_parts = [p for p in (sanskrit, transliteration, translation) if p]
+    if not primary_parts:
         return ""
 
     source = verse.get("source", {})
     meta = verse.get("metadata", {})
 
-    parts = [primary]
+    parts = [" ".join(primary_parts)]
     if source.get("text"):
         parts.append(f"Source: {source['text']}")
     if source.get("chapter_name"):
@@ -201,12 +202,11 @@ def index(config: RAGConfig | None = None, resume: bool = False) -> None:
 
         # BM25 text: combine Sanskrit + transliteration + translation for term matching
         content = verse.get("content", {})
-        bm25_parts = [
+        bm25_text = build_sparse_text([
             content.get("sanskrit", ""),
             content.get("transliteration", ""),
             content.get("translation", ""),
-        ]
-        bm25_text = " ".join(p for p in bm25_parts if p.strip())
+        ])
 
         verse_chunks.append((verse_id, embeddable, bm25_text, payload))
 
@@ -255,10 +255,26 @@ def index(config: RAGConfig | None = None, resume: bool = False) -> None:
         save_checkpoint(batch_idx + 1, config)
 
     clear_checkpoint(config)
-    final_count = store.count()
-    print(
-        f"\nIndexing complete! Collection '{config.qdrant_collection}' has {final_count:,} points."
-    )
+    final_count = store.count_exact()
+    verse_count = store.count_by_chunk_type("verse")
+    commentary_count = store.count_by_chunk_type("commentary")
+
+    print(f"\nIndexing complete! Collection '{config.qdrant_collection}' has:")
+    print(f"  Verse points: {verse_count:,} / expected {len(verse_chunks):,}")
+    print(f"  Commentary points: {commentary_count:,} / expected {len(commentary_chunks):,}")
+    print(f"  Total points: {final_count:,} / expected {total:,}")
+
+    if (
+        final_count != total
+        or verse_count != len(verse_chunks)
+        or commentary_count != len(commentary_chunks)
+    ):
+        raise AssertionError(
+            "Qdrant point-count mismatch after indexing: "
+            f"total={final_count}/{total}, "
+            f"verse={verse_count}/{len(verse_chunks)}, "
+            f"commentary={commentary_count}/{len(commentary_chunks)}"
+        )
 
 
 if __name__ == "__main__":

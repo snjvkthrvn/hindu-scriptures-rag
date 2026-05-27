@@ -7,19 +7,19 @@ A retrieval-augmented chat interface over a 118k-verse corpus of Hindu scripture
 
 ## Corpus
 
-`final/verses_enriched.json` — 118,358 verses, schema-validated.
+`final/verses_enriched.json` — 118,338 verses, schema-validated.
 
 | Scripture | Verses | Source |
 |---|---:|---|
 | Bhagavad Gita | 701 | DharmicData (GitHub) |
 | 10 Principal Upanishads | 546 | indian-scriptures (GitHub) — partial; see caveat below |
 | Rigveda | 10,200 | DharmicData |
-| Atharvaveda | 6,079 | DharmicData |
-| Yajurveda | 2,027 | DharmicData |
+| Atharvaveda | 6,121 | DharmicData |
+| Yajurveda | 1,965 | DharmicData |
 | Mahabharata (Critical Edition) | 73,816 | DharmicData |
 | Valmiki Ramayana | 22,742 | DharmicData |
 | Ramcharitmanas | 2,247 | DharmicData |
-| **Total** | **118,358** | |
+| **Total** | **118,338** | |
 
 The pipeline also extracts **13,947 commentary entries** alongside the verses.
 

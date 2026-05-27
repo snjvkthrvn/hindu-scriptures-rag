@@ -1,6 +1,6 @@
 # English-only RAG (v1)
 
-This folder holds the English-translation-only variant of the Hindu Scriptures RAG. Only verses with `content.translation` are indexed — Sanskrit-only sources are excluded — and the corpus is roughly an order of magnitude smaller (~13,800 verses vs ~118k in the full corpus).
+This folder holds the English-translation-only variant of the Hindu Scriptures RAG. Only verses with `content.translation` are indexed — Sanskrit-only sources are excluded — and the checked-in corpus is much smaller (3,814 verses vs ~118k in the full corpus).
 
 In production this app is **also the dual-app entrypoint**: `app.py` (port 5002) serves the full multilingual corpus at `/` and mounts the English UI as a Flask blueprint at `/beta`. To run only the English experience locally, use the dev paths below.
 
@@ -8,7 +8,7 @@ For technical detail (sources, parsers, indexer flow, schema), see [ENGLISH_RAG_
 
 ## Contents
 
-- **`verses_english_only.json`** — ~13,800 verses from Rigveda, Ramayana, Bhagavad Gita, Isha + Mundaka Upanishads (Mueller), 10 Upanishads (Claude), Yoga Sutras, Bhagavad Gita (Arnold), Mahabharata (all English translations)
+- **`verses_english_only.json`** — 3,814 verses from Ramayana, Bhagavad Gita, Isha + Mundaka Upanishads (Mueller), Yoga Sutras, Bhagavad Gita (Arnold), and Mahabharata
 - **`build_english_verses.py`** — aggregates English sources into the verse JSON
 - **`index_english.py`** — indexes into Qdrant collection `hindu_scriptures_english`
 - **`app.py`** — Flask entrypoint (dual app in production; mounts English at `/beta`)
@@ -22,7 +22,7 @@ For technical detail (sources, parsers, indexer flow, schema), see [ENGLISH_RAG_
 python english-v1-rag/build_english_verses.py
 ```
 
-This regenerates `verses_english_only.json` from the main corpus (`final/verses_enriched.json`) plus the extra Gutenberg/sacred-texts sources listed in [ENGLISH_RAG_SUMMARY.md](ENGLISH_RAG_SUMMARY.md).
+This regenerates `verses_english_only.json` from standalone English sources listed in [ENGLISH_RAG_SUMMARY.md](ENGLISH_RAG_SUMMARY.md). It does not read from or write back into the canonical `final/` corpus.
 
 ### 2. Install RAG dependencies
 

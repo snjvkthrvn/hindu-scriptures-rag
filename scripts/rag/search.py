@@ -6,6 +6,7 @@ Returns structured results ready for the LLM context window.
 from config import RAGConfig
 from embeddings import CohereEmbedder
 from qdrant_client import models
+from text_normalization import build_sparse_text
 from vector_store import QdrantStore
 
 # Module-level caches keyed by config values — avoid re-creating clients on
@@ -121,11 +122,12 @@ def search(
 
     # Embed the query
     query_vector = embedder.embed_query(query)
+    sparse_query = build_sparse_text([query])
 
     # Hybrid search with RRF
     points = store.search_hybrid(
         query_vector=query_vector,
-        query_text=query,
+        query_text=sparse_query,
         limit=top_k,
         query_filter=qdrant_filter,
     )

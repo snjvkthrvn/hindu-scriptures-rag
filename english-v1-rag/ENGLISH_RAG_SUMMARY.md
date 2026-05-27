@@ -6,7 +6,7 @@ The **English-only RAG** is a parallel pipeline that indexes only verses with En
 
 In production, `english-v1-rag/app.py` is the dual-app entrypoint: it serves the full multilingual corpus at `/` and mounts the English UI as a Flask blueprint at `/beta`. Local dev can run this file directly on port 5002.
 
-**Corpus size:** ~13,800 verses (vs ~118k in the full corpus with Sanskrit, commentaries, and additional sources).
+**Corpus size:** 3,814 verses (vs ~118k in the full corpus with Sanskrit, commentaries, and additional sources).
 
 For setup and quick commands see [README.md](README.md); for the project overview see [../README.md](../README.md).
 
@@ -40,17 +40,17 @@ english-v1-rag/
 
 | Source | Location | Loader | Verses |
 |--------|----------|--------|--------|
-| Rigveda | raw/sacred-texts/rigveda.json | load_rigveda() | 9,538 |
 | Ramayana | raw/gutenberg/ramayana.json | load_ramayana() | 1,830 |
 | Bhagavad Gita | processed/tier1-essential/parsed_verses.json | load_bhagavad_gita() | 701 |
 | Isha Upanishad | translations/isha_upanishad_mueller.csv | load_upanishad_csv() | 18 |
 | Mundaka Upanishad | translations/mundaka_upanishad_mueller.csv | load_upanishad_csv() | 13 |
-| **Upanishads (Claude)** | final/verses_enriched.json | load_claude_upanishads() | 546 |
 | Yoga Sutras | raw/sacred-texts/yoga_sutras.html | parse_yoga_sutras_html() | 194 |
-| Bhagavad Gita (Arnold) | raw/gutenberg/pg2388_bhagavad_gita.txt | parse_arnold_gita() | 56 |
-| Mahabharata | raw/gutenberg/pg15474_mahabharata.txt | parse_mahabharata_ganguli() | 2,753 |
+| Bhagavad Gita (Arnold) | raw/gutenberg/pg2388_bhagavad_gita.txt | parse_arnold_gita() | 168 |
+| Mahabharata | raw/gutenberg/pg15474_mahabharata.txt | parse_mahabharata_ganguli() | 890 |
 
-**Claude Upanishads** (from translate_verses.py → translations_cache → merge into verses_enriched): Isha, Kena, Katha, Prashna, Mundaka, Mandukya, Taittiriya, Aitareya, Brihadaranyaka, Svetasvatara. Filtered by `_is_english_text()` to exclude Devanagari.
+The English beta intentionally uses standalone English sources only. It no longer reads translated Upaniṣads from the canonical `final/verses_enriched.json`; that circular dependency made the beta corpus depend on whatever the full-corpus merger had last written.
+
+`build_english_verses.py` still has a legacy `load_rigveda()` path for `raw/sacred-texts/rigveda.json`, but that source file is not present in this checkout and contributes 0 verses to the generated corpus.
 
 ---
 
@@ -129,8 +129,6 @@ Reindex after changing; embeddings must match between index and query.
 | english-v1-rag/verses_english_only.json | English corpus output |
 | english-v1-rag/build_english_verses.py | Build script |
 | english-v1-rag/index_english.py | Index script |
-| final/verses_enriched.json | Source for Claude Upanishads |
-| final/translations_cache.json | Claude translations (idx_NNN → text) |
 | scripts/rag/config.py | RAG config (collection, model, etc.) |
 | scripts/rag/indexer.py | Shared indexer |
 
