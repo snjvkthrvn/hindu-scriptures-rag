@@ -24,13 +24,37 @@ class EmbeddingProvider(Enum):
     SENTENCE_TRANSFORMERS = "sentence_transformers"
     OPENAI = "openai"
     COHERE = "cohere"
+    GEMINI = "gemini"
+
+
+def _embedding_provider_from_env() -> EmbeddingProvider:
+    raw = os.environ.get("EMBEDDING_PROVIDER", "gemini").strip().lower()
+    for provider in EmbeddingProvider:
+        if provider.value == raw:
+            return provider
+    return EmbeddingProvider.GEMINI
+
+
+def _embedding_dims_from_env() -> int:
+    raw = os.environ.get("EMBEDDING_DIMS")
+    if raw:
+        return int(raw)
+
+    provider = _embedding_provider_from_env()
+    if provider == EmbeddingProvider.COHERE:
+        return 1024
+    return 1536
+
+
+def _gemini_api_key_from_env() -> str:
+    return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""
 
 
 @dataclass
 class RAGConfig:
     # --- Provider selection ---
     llm_provider: LLMProvider = LLMProvider.ANTHROPIC
-    embedding_provider: EmbeddingProvider = EmbeddingProvider.COHERE
+    embedding_provider: EmbeddingProvider = field(default_factory=_embedding_provider_from_env)
 
     # --- LLM models ---
     ollama_model: str = "llama3.1:8b"
@@ -44,13 +68,46 @@ class RAGConfig:
     sentence_transformer_model: str = "all-MiniLM-L6-v2"
     openai_embedding_model: str = "text-embedding-3-small"
 
-    # --- Cohere ---
+    # --- Embeddings (shared) ---
+    embedding_dims: int = field(default_factory=_embedding_dims_from_env)
+    embedding_batch_size: int = field(
+        default_factory=lambda: int(os.environ.get("EMBEDDING_BATCH_SIZE", "50"))
+    )
+
+    # --- Gemini (default for Sanskrit-first corpus) ---
+    gemini_api_key: str = field(default_factory=_gemini_api_key_from_env)
+    gemini_model: str = field(
+        default_factory=lambda: os.environ.get("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2")
+    )
+    gemini_batch_delay_sec: float = field(
+        default_factory=lambda: float(os.environ.get("GEMINI_BATCH_DELAY_SEC", "1"))
+    )
+
+    # --- Cohere (legacy / English beta fallback) ---
     cohere_api_key: str = field(default_factory=lambda: os.environ.get("COHERE_API_KEY", ""))
-    cohere_model: str = "embed-multilingual-v3.0"
-    cohere_dims: int = 1024
+    cohere_model: str = field(
+        default_factory=lambda: os.environ.get("COHERE_EMBEDDING_MODEL", "embed-multilingual-v3.0")
+    )
     cohere_batch_delay_sec: float = field(
         default_factory=lambda: float(os.environ.get("COHERE_BATCH_DELAY_SEC", "4"))
     )  # Delay between embed batches to stay under 2,000 inputs/min
+
+    @property
+    def cohere_dims(self) -> int:
+        """Backward-compatible alias for Qdrant dense vector size."""
+        return self.embedding_dims
+
+    @property
+    def embedding_model(self) -> str:
+        if self.embedding_provider == EmbeddingProvider.GEMINI:
+            return self.gemini_model
+        if self.embedding_provider == EmbeddingProvider.COHERE:
+            return self.cohere_model
+        if self.embedding_provider == EmbeddingProvider.OPENAI:
+            return self.openai_embedding_model
+        if self.embedding_provider == EmbeddingProvider.SENTENCE_TRANSFORMERS:
+            return self.sentence_transformer_model
+        raise ValueError(f"Unsupported embedding provider: {self.embedding_provider}")
 
     # --- Qdrant ---
     # When set (e.g. "http://localhost:6333"), use Qdrant server (Docker). Else use local embedded storage.
@@ -61,6 +118,12 @@ class RAGConfig:
     qdrant_path: Path = field(default_factory=lambda: PROJECT_ROOT / "qdrant_data")
     qdrant_collection: str = field(
         default_factory=lambda: os.environ.get("RAG_COLLECTION", "hindu_scriptures")
+    )
+    # HTTP read timeout for the Qdrant server client. The default is short and a
+    # cold-start create_collection (segment alloc + payload indexes + fsync) can
+    # exceed it; large upsert batches can too.
+    qdrant_timeout_sec: float = field(
+        default_factory=lambda: float(os.environ.get("QDRANT_TIMEOUT_SEC", "120"))
     )
 
     # --- API keys (from environment) ---

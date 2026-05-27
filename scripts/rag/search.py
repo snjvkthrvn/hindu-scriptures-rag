@@ -1,10 +1,10 @@
-"""Hybrid search over Qdrant: dense (Cohere) + sparse (BM25) with metadata filters.
+"""Hybrid search over Qdrant: dense embeddings + sparse BM25 with metadata filters.
 
 Returns structured results ready for the LLM context window.
 """
 
 from config import RAGConfig
-from embeddings import CohereEmbedder
+from embeddings import Embedder, get_embedder
 from qdrant_client import models
 from text_normalization import build_sparse_text
 from vector_store import QdrantStore
@@ -12,14 +12,14 @@ from vector_store import QdrantStore
 # Module-level caches keyed by config values — avoid re-creating clients on
 # every search call while supporting multiple collections / models.
 # The BM25 encoder in QdrantStore is especially expensive to reload.
-_embedder_cache: dict[str, CohereEmbedder] = {}
+_embedder_cache: dict[str, Embedder] = {}
 _store_cache: dict[str, QdrantStore] = {}
 
 
-def _get_embedder(config: RAGConfig) -> CohereEmbedder:
-    key = config.cohere_model
+def _get_embedder(config: RAGConfig) -> Embedder:
+    key = f"{config.embedding_provider.value}:{config.embedding_model}:{config.embedding_dims}"
     if key not in _embedder_cache:
-        _embedder_cache[key] = CohereEmbedder(config)
+        _embedder_cache[key] = get_embedder(config)
     return _embedder_cache[key]
 
 
@@ -100,7 +100,7 @@ def search(
     filters: dict | None = None,
     top_k: int | None = None,
 ) -> list[dict]:
-    """Hybrid search: dense (Cohere) + sparse (BM25) with RRF fusion.
+    """Hybrid search: dense embeddings + sparse BM25 with RRF fusion.
 
     Args:
         query: Natural language question.

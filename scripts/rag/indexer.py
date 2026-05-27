@@ -1,4 +1,4 @@
-"""One-time indexer: chunk verses → embed via Cohere → insert into Qdrant.
+"""One-time indexer: chunk verses -> embed -> insert into Qdrant.
 
 Verse-native chunking strategy:
   - Verse chunk: embed Sanskrit + transliteration + translation, store full verse
@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 from config import PROJECT_ROOT, RAGConfig
-from embeddings import CohereEmbedder
+from embeddings import get_embedder
 from text_normalization import build_sparse_text
 from tqdm import tqdm
 from vector_store import QdrantStore
@@ -172,8 +172,11 @@ def index(config: RAGConfig | None = None, resume: bool = False) -> None:
     print(f"Loaded {len(verses):,} verses")
 
     # Initialize components
-    print(f"Initializing Cohere embedder ({config.cohere_model})...")
-    embedder = CohereEmbedder(config)
+    print(
+        f"Initializing {config.embedding_provider.value} embedder "
+        f"({config.embedding_model}, {config.embedding_dims} dims)..."
+    )
+    embedder = get_embedder(config)
 
     print(f"Initializing Qdrant at {config.qdrant_path}...")
     store = QdrantStore(config)
@@ -227,7 +230,7 @@ def index(config: RAGConfig | None = None, resume: bool = False) -> None:
 
     # Index all chunks
     all_chunks = verse_chunks + commentary_chunks
-    batch_size = 96  # Match Cohere's batch limit
+    batch_size = embedder.batch_size
     total_batches = (len(all_chunks) + batch_size - 1) // batch_size
 
     print(f"\nEmbedding and indexing {total:,} chunks (batch size {batch_size})...")
@@ -245,7 +248,7 @@ def index(config: RAGConfig | None = None, resume: bool = False) -> None:
         bm25_texts = [c[2] for c in batch]
         payloads = [c[3] for c in batch]
 
-        # Embed via Cohere (has built-in retry on rate limit)
+        # Embed via configured provider (has built-in retry on rate limit)
         dense_vectors = embedder.embed_documents(embeddable_texts)
 
         # Upsert to Qdrant

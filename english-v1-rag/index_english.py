@@ -15,7 +15,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "scripts" / "rag"))
 
-from config import RAGConfig
+from config import EmbeddingProvider, RAGConfig
 from indexer import index
 
 
@@ -26,6 +26,8 @@ def main():
         sys.exit(1)
 
     config = RAGConfig(
+        embedding_provider=EmbeddingProvider.COHERE,
+        embedding_dims=1024,
         verses_file=verses_file,
         qdrant_collection="hindu_scriptures_english",
         cohere_model="embed-english-v3.0",

@@ -1,6 +1,7 @@
-# RAG system dependencies — Qdrant + Cohere + Claude stack
+# RAG system dependencies - Qdrant + embedding providers + Claude stack
 python-dotenv>=1.0.0
 cohere>=5.0
+google-genai>=2.6.0
 qdrant-client>=1.7.0
 fastembed>=0.2.0
 indic-transliteration>=2.3.0

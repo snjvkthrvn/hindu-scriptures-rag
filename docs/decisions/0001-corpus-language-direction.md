@@ -53,7 +53,7 @@ Three independent analyses converged on Sanskrit-first:
 - Phase 2 regenerated `final/` from patched parsers: `final/verses.json`, `final/verses_enriched.json`, and `final/metadata.json` now contain **118,338** records with **0 duplicate IDs** on disk.
 - Phase 3 severed the circular English build: `merge_english.py` and the Dutt append downloader were removed, and the English beta builder no longer reads from canonical `final/`.
 - Phase 5 switched the Qdrant indexer to Sanskrit-first concatenated embedding text (`sanskrit + transliteration + translation`), while preserving translation-only beta indexing behavior.
-- Phase 6 implemented a lightweight BM25 alias layer: sparse index/query text now expands Devanāgarī → IAST plus diacritic-stripped/common ASCII forms (`कृष्ण`, `kṛṣṇa`, `krsna`, `krishna`; `mokṣa`, `moksha`). Dense Cohere queries remain unchanged.
+- Phase 6 implemented a lightweight BM25 alias layer: sparse index/query text now expands Devanāgarī → IAST plus diacritic-stripped/common ASCII forms (`कृष्ण`, `kṛṣṇa`, `krsna`, `krishna`; `mokṣa`, `moksha`). Dense embedding queries remain provider-native.
 - Phase 7 preflight added exact Qdrant point-count assertions for verse/commentary chunks. The regenerated corpus should index to **132,285** points (118,338 verses + 13,947 commentaries).
 - Still open: reindex Qdrant.
 

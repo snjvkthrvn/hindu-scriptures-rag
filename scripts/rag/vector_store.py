@@ -1,4 +1,4 @@
-"""Qdrant vector store with dense (Cohere) + sparse (BM25) vectors.
+"""Qdrant vector store with dense embeddings + sparse BM25 vectors.
 
 Uses Qdrant server (Docker) when QDRANT_URL is set, else runs in-process local storage.
 """
@@ -38,6 +38,7 @@ class QdrantStore:
             self.client = QdrantClient(
                 url=config.qdrant_url,
                 api_key=config.qdrant_api_key,
+                timeout=config.qdrant_timeout_sec,
             )
         else:
             # In-process Qdrant (persists to disk)
@@ -66,7 +67,7 @@ class QdrantStore:
             collection_name=self.collection,
             vectors_config={
                 "dense": VectorParams(
-                    size=self.config.cohere_dims,
+                    size=self.config.embedding_dims,
                     distance=Distance.COSINE,
                 ),
             },
@@ -168,7 +169,7 @@ class QdrantStore:
         limit: int = 10,
         query_filter: models.Filter | None = None,
     ) -> list[models.ScoredPoint]:
-        """Dense-only search (Cohere embeddings)."""
+        """Dense-only search."""
         return self.client.query_points(
             collection_name=self.collection,
             query=query_vector,

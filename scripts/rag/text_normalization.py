@@ -1,6 +1,6 @@
 """Lexical normalization helpers for sparse Sanskrit search.
 
-Dense Cohere embeddings handle cross-lingual matching. These helpers are only
+Dense embeddings handle cross-lingual matching. These helpers are only
 for BM25, where exact token spelling matters: `kṛṣṇa`, `krsna`, `krishna`, and
 `कृष्ण` should share at least one sparse-search token.
 """
