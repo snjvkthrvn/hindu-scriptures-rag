@@ -43,7 +43,7 @@ setup:
 	@bash setup.sh
 
 install:
-	@$(PYTHON) -m pip install -r requirements-pipeline.txt
+	@$(PYTHON) -m pip install -r requirements.txt
 
 test:
 	@$(PYTHON) $(SCRIPTS)/test_pipeline.py --test all
