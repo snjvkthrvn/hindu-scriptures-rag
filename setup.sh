@@ -77,11 +77,11 @@ source venv/bin/activate
 pip install --upgrade pip
 
 # Install dependencies
-if [ -f "requirements-pipeline.txt" ]; then
-    pip install -r requirements-pipeline.txt
+if [ -f "requirements.txt" ]; then
+    pip install -r requirements.txt
     echo -e "${GREEN}✓${NC} Dependencies installed"
 else
-    echo -e "${YELLOW}Warning: requirements-pipeline.txt not found${NC}"
+    echo -e "${YELLOW}Warning: requirements.txt not found${NC}"
 fi
 
 echo ""

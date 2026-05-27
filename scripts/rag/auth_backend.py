@@ -22,8 +22,6 @@ import logging
 import os
 import secrets
 import sqlite3
-import tempfile
-from pathlib import Path
 
 from config import PROJECT_ROOT
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, session, url_for
@@ -35,16 +33,7 @@ from wtforms import ValidationError
 
 logger = logging.getLogger(__name__)
 
-def _default_db_path() -> Path:
-    raw = (os.environ.get("AUTH_DB_PATH") or "").strip()
-    if raw:
-        return Path(raw)
-    if os.environ.get("VERCEL"):
-        return Path(tempfile.gettempdir()) / "hindu-scriptures-rag" / "auth.db"
-    return PROJECT_ROOT / "data" / "auth.db"
-
-
-_DB_PATH = _default_db_path()
+_DB_PATH = PROJECT_ROOT / "data" / "auth.db"
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
