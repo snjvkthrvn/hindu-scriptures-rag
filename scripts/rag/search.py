@@ -16,6 +16,11 @@ _embedder_cache: dict[str, Embedder] = {}
 _store_cache: dict[str, QdrantStore] = {}
 
 
+def _candidate_limit(top_k: int) -> int:
+    """Fetch enough fused candidates to let verse/commentary pairs reorder."""
+    return min(max(top_k * 4, top_k + 8), 64)
+
+
 def _get_embedder(config: RAGConfig) -> Embedder:
     key = f"{config.embedding_provider.value}:{config.embedding_model}:{config.embedding_dims}"
     if key not in _embedder_cache:
@@ -94,6 +99,37 @@ def _format_result(point) -> dict:
     }
 
 
+def _rank_chunk_results(results: list[dict], top_k: int) -> list[dict]:
+    """Prefer the base verse before commentaries for the same verse.
+
+    Commentary often carries more literal matching text, especially for
+    transliterated queries. Keep Qdrant's global fused order, but when the first
+    hit for a verse is commentary and the base verse is also in the candidate
+    set, swap the verse into that first position so answer context starts with
+    scripture rather than interpretation.
+    """
+    ranked = list(results)
+    verse_index_by_id: dict[str, int] = {}
+
+    for idx, result in enumerate(ranked):
+        verse_id = result.get("verse_id") or result.get("id") or ""
+        if verse_id and result.get("chunk_type") == "verse":
+            verse_index_by_id[verse_id] = idx
+
+    for idx, result in enumerate(ranked):
+        if result.get("chunk_type") != "commentary":
+            continue
+        verse_id = result.get("verse_id") or result.get("id") or ""
+        verse_idx = verse_index_by_id.get(verse_id)
+        if verse_idx is None or verse_idx <= idx:
+            continue
+
+        ranked[idx], ranked[verse_idx] = ranked[verse_idx], ranked[idx]
+        verse_index_by_id[verse_id] = idx
+
+    return ranked[:top_k]
+
+
 def search(
     query: str,
     config: RAGConfig | None = None,
@@ -124,15 +160,17 @@ def search(
     query_vector = embedder.embed_query(query)
     sparse_query = build_sparse_text([query])
 
-    # Hybrid search with RRF
+    # Hybrid search with RRF. Fetch a wider candidate set, then do a small
+    # corpus-specific ordering pass before returning the requested top_k.
+    candidate_limit = _candidate_limit(top_k)
     points = store.search_hybrid(
         query_vector=query_vector,
         query_text=sparse_query,
-        limit=top_k,
+        limit=candidate_limit,
         query_filter=qdrant_filter,
     )
 
-    return [_format_result(p) for p in points]
+    return _rank_chunk_results([_format_result(p) for p in points], top_k)
 
 
 def search_with_context_expansion(
