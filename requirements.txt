@@ -1,10 +1,3 @@
-requests>=2.28.0
-curl_cffi>=0.5.0
-beautifulsoup4>=4.11.0
-pandas>=1.5.0
-tqdm>=4.64.0
-lxml>=4.9.0
-aiohttp>=3.8.0
-PyPDF2>=3.0.0
-ebooklib>=0.18
-indic-transliteration>=2.3.0
+# Runtime dependencies for the Flask RAG app. Vercel installs from the root
+# requirements.txt, so keep this file deployment-focused.
+-r requirements-rag.txt
