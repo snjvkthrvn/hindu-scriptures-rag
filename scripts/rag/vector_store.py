@@ -4,7 +4,6 @@ Uses Qdrant server (Docker) when QDRANT_URL is set, else runs in-process local s
 """
 
 import hashlib
-import os
 
 from config import RAGConfig
 from qdrant_client import QdrantClient, models
@@ -42,12 +41,6 @@ class QdrantStore:
                 timeout=config.qdrant_timeout_sec,
             )
         else:
-            if os.environ.get("VERCEL"):
-                raise RuntimeError(
-                    "QDRANT_URL is required on Vercel. "
-                    "Use Qdrant Cloud or another external Qdrant server; "
-                    "embedded qdrant_data is local-only."
-                )
             # In-process Qdrant (persists to disk)
             config.qdrant_path.mkdir(parents=True, exist_ok=True)
             self.client = QdrantClient(path=str(config.qdrant_path))

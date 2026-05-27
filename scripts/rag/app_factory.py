@@ -73,17 +73,6 @@ def _call_warmup(config: RAGConfig) -> None:
     warmup(config)
 
 
-def _env_truthy(value: str | None) -> bool:
-    return (value or "").strip().lower() in ("1", "true", "yes", "on")
-
-
-def _rag_warmup_enabled() -> bool:
-    raw = os.environ.get("RAG_WARMUP")
-    if raw is not None:
-        return _env_truthy(raw)
-    return not os.environ.get("VERCEL")
-
-
 def _load_module(module_name: str, path: Path) -> ModuleType:
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
@@ -273,20 +262,20 @@ def _register_rag_routes(
 
 def _register_warmup(app, config: RAGConfig) -> None:
     def _warmup_rag():
-        if not _rag_warmup_enabled():
+        if os.environ.get("RAG_WARMUP", "1") != "1":
             return
         try:
             _call_warmup(config)
         except Exception:
             pass
 
-    if _rag_warmup_enabled():
+    if os.environ.get("RAG_WARMUP", "1") == "1":
         threading.Thread(target=_warmup_rag, daemon=True).start()
 
 
 def _register_dual_warmup(app, english_config: RAGConfig, full_config: RAGConfig) -> None:
     def _warmup_both():
-        if not _rag_warmup_enabled():
+        if os.environ.get("RAG_WARMUP", "1") != "1":
             return
         for config in (english_config, full_config):
             try:
@@ -294,7 +283,7 @@ def _register_dual_warmup(app, english_config: RAGConfig, full_config: RAGConfig
             except Exception:
                 pass
 
-    if _rag_warmup_enabled():
+    if os.environ.get("RAG_WARMUP", "1") == "1":
         threading.Thread(target=_warmup_both, daemon=True).start()
 
 
@@ -383,7 +372,7 @@ def create_full_app() -> Flask:
 
     metadata_path = PROJECT_ROOT / "final" / "metadata.json"
     try:
-        with open(metadata_path, encoding="utf-8") as f:
+        with open(metadata_path) as f:
             corpus_meta = json.load(f)
     except FileNotFoundError:
         corpus_meta = {}
@@ -438,7 +427,7 @@ def create_dual_app(english_config: RAGConfig, english_filters: dict) -> Flask:
 
     metadata_path = PROJECT_ROOT / "final" / "metadata.json"
     try:
-        with open(metadata_path, encoding="utf-8") as f:
+        with open(metadata_path) as f:
             corpus_meta = json.load(f)
     except FileNotFoundError:
         corpus_meta = {}

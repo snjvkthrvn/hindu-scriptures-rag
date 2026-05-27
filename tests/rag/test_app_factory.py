@@ -13,12 +13,7 @@ auth_backend_stub = types.ModuleType("auth_backend")
 auth_backend_stub.register_auth = lambda app: None
 sys.modules.setdefault("auth_backend", auth_backend_stub)
 
-from app_factory import (
-    _rag_warmup_enabled,
-    _register_dual_warmup,
-    _register_rag_routes,
-    create_dual_app,
-)
+from app_factory import _register_dual_warmup, _register_rag_routes, create_dual_app
 from config import RAGConfig
 
 
@@ -83,13 +78,6 @@ class AppFactoryTests(unittest.TestCase):
         self.assertEqual(mock_call_warmup.call_count, 2)
         mock_call_warmup.assert_any_call(english_config)
         mock_call_warmup.assert_any_call(full_config)
-
-    def test_warmup_defaults_off_on_vercel_unless_explicit(self):
-        with patch.dict(os.environ, {"VERCEL": "1"}, clear=True):
-            self.assertFalse(_rag_warmup_enabled())
-
-        with patch.dict(os.environ, {"VERCEL": "1", "RAG_WARMUP": "1"}, clear=True):
-            self.assertTrue(_rag_warmup_enabled())
 
     @patch("app_factory._register_dual_warmup")
     @patch("app_factory._load_module", create=True)
