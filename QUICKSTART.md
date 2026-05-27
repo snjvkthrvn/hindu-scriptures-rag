@@ -6,7 +6,7 @@ Get the chat UI running in under five minutes. For deeper context (architecture,
 
 - Python 3.10 or higher
 - Docker + Docker Compose (recommended) **or** a local Qdrant instance
-- A Cohere API key (embeddings) and either Anthropic or OpenAI API key (answer generation)
+- A Gemini API key for the full corpus, a Cohere API key for `/beta`, and either Anthropic or OpenAI for answer generation
 
 ## TL;DR — Docker
 
@@ -14,7 +14,7 @@ Get the chat UI running in under five minutes. For deeper context (architecture,
 git clone https://github.com/snjvkthrvn/hindu-scriptures-rag.git
 cd hindu-scriptures-rag
 
-cp .env.example .env       # fill in COHERE_API_KEY + ANTHROPIC_API_KEY
+cp .env.example .env       # fill in GEMINI_API_KEY, COHERE_API_KEY, and ANTHROPIC_API_KEY
 make deploy                # starts Qdrant + Caddy + the rag service
 make deploy-index          # one-time: embed verses into Qdrant
 ```
@@ -75,12 +75,13 @@ Set this in your shell profile to make it permanent.
 
 **Qdrant connection refused.** Confirm `QDRANT_URL` in `.env` points to a reachable instance. Default in Docker is `http://qdrant:6333` (container DNS); for local dev outside Docker, use `http://localhost:6333`.
 
-**Embedding errors / `403` from Cohere.** `COHERE_API_KEY` is missing or invalid. The free tier is enough for the initial 118k-verse index.
+**Embedding errors / `403` from Gemini or Cohere.** `GEMINI_API_KEY` is required for the full corpus. `COHERE_API_KEY` is still required for the English beta.
 
 **`/api/query` returns 401.** Either set `RAG_API_KEY` and pass it as the `X-API-Key` header, or set `SESSION_PASSWORD` and log in through the UI. With neither set, the API is open from any same-origin request (the CSRF guard still applies).
 
 ## Next steps
 
 - Read the architecture overview in [README.md](README.md).
+- Deploy the Flask app to Vercel with [docs/deploy-vercel.md](docs/deploy-vercel.md).
 - Customize prompts in `scripts/rag/prompt_templates.py` and `english-v1-rag/prompt_templates.py`.
 - For the parallel English-only RAG (smaller corpus, fits in a free Qdrant tier), see [english-v1-rag/README.md](english-v1-rag/README.md).

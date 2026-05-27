@@ -27,7 +27,7 @@ The pipeline also extracts **13,947 commentary entries** alongside the verses.
 
 ## Web app
 
-Two Flask processes share a backend in `scripts/rag/`. In production both serve through one Docker container on port 5002, routed by Caddy:
+Two Flask processes share a backend in `scripts/rag/`. In Docker/local production both serve through one container on port 5002, routed by Caddy. Vercel uses root [`app.py`](app.py) as the WSGI entrypoint and serves the same dual app as one Python Function:
 
 | URL | Serves | Code path |
 |---|---|---|
@@ -68,6 +68,10 @@ make deploy-down           # docker compose down
 make deploy-logs           # tail logs
 ```
 
+### Vercel deployment
+
+Vercel hosts the Flask app only. Qdrant must be external, for example Qdrant Cloud, and the collections must already be indexed. See [`docs/deploy-vercel.md`](docs/deploy-vercel.md) for the exact environment variables, auth caveats, and deploy commands.
+
 ## Rebuilding the corpus
 
 The current `final/verses_enriched.json` is already complete. You only need to rebuild if you've changed the parsers, added a source, or are starting from a fresh clone.
@@ -76,7 +80,7 @@ The current `final/verses_enriched.json` is already complete. You only need to r
 # Windows requires UTF-8 console (the parsers print emoji):
 $env:PYTHONUTF8 = "1"    # PowerShell — or `set PYTHONUTF8=1` in cmd.exe
 
-pip install -r requirements.txt
+pip install -r requirements-pipeline.txt
 
 # 1. Download from GitHub (~2 min). Project Gutenberg downloads are optional.
 python scripts/downloaders/download_github.py
@@ -142,8 +146,10 @@ The older orchestrator `scripts/main.py` (driven by the Makefile) chains the sam
 │   └── metadata.json              # corpus statistics
 │
 ├── raw/                           # downloaded source files (git-ignored)
+├── app.py, vercel.json, .vercelignore
 ├── Caddyfile, Dockerfile, docker-compose.yml
-├── requirements.txt               # data pipeline deps
+├── requirements.txt               # web app runtime deps
+├── requirements-pipeline.txt      # data pipeline deps
 ├── requirements-rag.txt           # web app deps
 └── english-v1-rag/README.md, ENGLISH_RAG_SUMMARY.md
 ```
@@ -195,10 +201,13 @@ The older orchestrator `scripts/main.py` (driven by the Makefile) chains the sam
 |---|---|
 | `ANTHROPIC_API_KEY` | LLM (default provider) |
 | `OPENAI_API_KEY` | Alternative LLM, also used for moderation |
-| `COHERE_API_KEY` | Embeddings (required for indexing and query) |
-| `QDRANT_URL` | Vector store endpoint (default `http://localhost:6333` in Docker) |
+| `GEMINI_API_KEY` | Full-corpus embeddings (default Gemini Embedding 2) |
+| `COHERE_API_KEY` | English beta embeddings |
+| `QDRANT_URL` | Vector store endpoint (external HTTPS endpoint on Vercel; `http://localhost:6333` for local dev) |
+| `QDRANT_API_KEY` | Qdrant Cloud API key |
 | `SESSION_PASSWORD` | If set, enables session-based login |
 | `RAG_API_KEY` | Required for raw `/api/*` access from clients without a session |
+| `RAG_WARMUP` | Defaults on locally and off on Vercel unless set |
 | `CORS_ORIGINS` | Comma-separated; also used by the CSRF origin guard |
 | `DOMAIN` | Caddy uses this for the `localhost` → real-host swap |
 
@@ -216,4 +225,5 @@ Respect those when redistributing the corpus.
 
 - [`english-v1-rag/README.md`](english-v1-rag/README.md) — English beta overview
 - [`english-v1-rag/ENGLISH_RAG_SUMMARY.md`](english-v1-rag/ENGLISH_RAG_SUMMARY.md) — technical reference for the English RAG (sources, parsers, indexing)
+- [`docs/deploy-vercel.md`](docs/deploy-vercel.md) — Vercel deployment guide
 - [`UPANISHAD_TRANSLATIONS.md`](UPANISHAD_TRANSLATIONS.md) — historical notes on a one-off Upanishad translation scrape (Feb 2026)
