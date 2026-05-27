@@ -16,29 +16,23 @@ from tqdm import tqdm
 def build_embeddable_text(verse: dict) -> str:
     """Build the text used for embedding.
 
-    Priority: English translation > transliteration > Sanskrit.
+    Priority: Sanskrit + transliteration + English translation.
     Always appends metadata context in English for better retrieval.
     """
     content = verse.get("content", {})
-    translation = content.get("translation", "").strip()
-    transliteration = content.get("transliteration", "").strip()
     sanskrit = content.get("sanskrit", "").strip()
+    transliteration = content.get("transliteration", "").strip()
+    translation = content.get("translation", "").strip()
 
-    # Pick the best available text for the embedding model
-    if translation:
-        primary = translation
-    elif transliteration:
-        primary = transliteration
-    elif sanskrit:
-        primary = sanskrit
-    else:
-        primary = ""
+    primary_parts = [p for p in (sanskrit, transliteration, translation) if p]
+    if not primary_parts:
+        return ""
 
     # Append metadata context in English for semantic searchability
     source = verse.get("source", {})
     meta = verse.get("metadata", {})
 
-    parts = [primary]
+    parts = [" ".join(primary_parts)]
 
     source_text = source.get("text", "")
     if source_text:

@@ -139,9 +139,13 @@ class UpanishadCSVParser:
                     transliteration = (row.get("transliteration") or "").strip()
                     translation = (row.get("translation") or row.get("english") or "").strip()
 
-                    # indian-scriptures has mantra but no translation - use sanskrit for searchability
-                    if not translation and sanskrit:
-                        translation = sanskrit
+                    # Leave translation empty when the source CSV has no English.
+                    # The previous "translation = sanskrit" fallback (ADR 0001)
+                    # injected Devanāgarī into the translation field as a
+                    # searchability hack, but that made English-language ranking
+                    # incoherent and was indistinguishable from real English at
+                    # retrieval time. Real English now comes in (where it exists)
+                    # via aligned-translation sources, not from this fallback.
 
                     # Normalize
                     sanskrit = normalize_devanagari(sanskrit)
@@ -155,10 +159,9 @@ class UpanishadCSVParser:
                     # so collapsing to any single component (first OR last digit)
                     # produces duplicate ids — the first verse of every khanda
                     # becomes "_1". Number sequentially within each Upanishad
-                    # (1..N in file order) instead. This guarantees unique ids
-                    # AND matches the flat per-Upanishad numbering used by the
-                    # English corpus (verses_english_only.json), so merge_english
-                    # aligns each translation to the correct verse.
+                    # (1..N in file order) instead — this is the intrinsic ID
+                    # scheme for this corpus and is independently correct
+                    # (one verse, one ID, in file order).
                     verse_num_int = len(verses) + 1
 
                     verse_id = f"upanishad_{title.lower().replace(' ', '_')}_{verse_num_int}"

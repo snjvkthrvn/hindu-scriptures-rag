@@ -1,6 +1,6 @@
 """Query the Hindu Scriptures RAG system.
 
-Uses Qdrant hybrid search (dense Cohere + sparse BM25) and Claude for generation.
+Uses Qdrant hybrid search (dense embeddings + sparse BM25) and Claude for generation.
 Falls back to Ollama if Anthropic API key is not set.
 
 Usage:

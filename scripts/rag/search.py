@@ -1,24 +1,30 @@
-"""Hybrid search over Qdrant: dense (Cohere) + sparse (BM25) with metadata filters.
+"""Hybrid search over Qdrant: dense embeddings + sparse BM25 with metadata filters.
 
 Returns structured results ready for the LLM context window.
 """
 
 from config import RAGConfig
-from embeddings import CohereEmbedder
+from embeddings import Embedder, get_embedder
 from qdrant_client import models
+from text_normalization import build_sparse_text
 from vector_store import QdrantStore
 
 # Module-level caches keyed by config values — avoid re-creating clients on
 # every search call while supporting multiple collections / models.
 # The BM25 encoder in QdrantStore is especially expensive to reload.
-_embedder_cache: dict[str, CohereEmbedder] = {}
+_embedder_cache: dict[str, Embedder] = {}
 _store_cache: dict[str, QdrantStore] = {}
 
 
-def _get_embedder(config: RAGConfig) -> CohereEmbedder:
-    key = config.cohere_model
+def _candidate_limit(top_k: int) -> int:
+    """Fetch enough fused candidates to let verse/commentary pairs reorder."""
+    return min(max(top_k * 4, top_k + 8), 64)
+
+
+def _get_embedder(config: RAGConfig) -> Embedder:
+    key = f"{config.embedding_provider.value}:{config.embedding_model}:{config.embedding_dims}"
     if key not in _embedder_cache:
-        _embedder_cache[key] = CohereEmbedder(config)
+        _embedder_cache[key] = get_embedder(config)
     return _embedder_cache[key]
 
 
@@ -93,13 +99,44 @@ def _format_result(point) -> dict:
     }
 
 
+def _rank_chunk_results(results: list[dict], top_k: int) -> list[dict]:
+    """Prefer the base verse before commentaries for the same verse.
+
+    Commentary often carries more literal matching text, especially for
+    transliterated queries. Keep Qdrant's global fused order, but when the first
+    hit for a verse is commentary and the base verse is also in the candidate
+    set, swap the verse into that first position so answer context starts with
+    scripture rather than interpretation.
+    """
+    ranked = list(results)
+    verse_index_by_id: dict[str, int] = {}
+
+    for idx, result in enumerate(ranked):
+        verse_id = result.get("verse_id") or result.get("id") or ""
+        if verse_id and result.get("chunk_type") == "verse":
+            verse_index_by_id[verse_id] = idx
+
+    for idx, result in enumerate(ranked):
+        if result.get("chunk_type") != "commentary":
+            continue
+        verse_id = result.get("verse_id") or result.get("id") or ""
+        verse_idx = verse_index_by_id.get(verse_id)
+        if verse_idx is None or verse_idx <= idx:
+            continue
+
+        ranked[idx], ranked[verse_idx] = ranked[verse_idx], ranked[idx]
+        verse_index_by_id[verse_id] = idx
+
+    return ranked[:top_k]
+
+
 def search(
     query: str,
     config: RAGConfig | None = None,
     filters: dict | None = None,
     top_k: int | None = None,
 ) -> list[dict]:
-    """Hybrid search: dense (Cohere) + sparse (BM25) with RRF fusion.
+    """Hybrid search: dense embeddings + sparse BM25 with RRF fusion.
 
     Args:
         query: Natural language question.
@@ -121,16 +158,19 @@ def search(
 
     # Embed the query
     query_vector = embedder.embed_query(query)
+    sparse_query = build_sparse_text([query])
 
-    # Hybrid search with RRF
+    # Hybrid search with RRF. Fetch a wider candidate set, then do a small
+    # corpus-specific ordering pass before returning the requested top_k.
+    candidate_limit = _candidate_limit(top_k)
     points = store.search_hybrid(
         query_vector=query_vector,
-        query_text=query,
-        limit=top_k,
+        query_text=sparse_query,
+        limit=candidate_limit,
         query_filter=qdrant_filter,
     )
 
-    return [_format_result(p) for p in points]
+    return _rank_chunk_results([_format_result(p) for p in points], top_k)
 
 
 def search_with_context_expansion(

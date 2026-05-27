@@ -11,10 +11,10 @@ The verse corpus (`final/verses_enriched.json`) grew from ~118,338 records (auth
 
 - **~93,030 verses (43%)** are an "Itihasa/Dutt" append — a 19th-c. Calcutta-vulgate recension of the Mahābhārata/Rāmāyaṇa added mainly to carry English. It **thematically overlaps** the Critical-Edition Mahābhārata (73,816) and Valmiki Rāmāyaṇa (22,742) already present; **59,796** of it has no chapter/section metadata.
 - **3,212 records are English-only with no Sanskrit** (Rāmāyaṇa 1,830; Mahābhārata 890; Aṣṭāvakra Gītā 298; Yoga Sūtras 194).
-- **Parser ID-collapse bugs:** Upaniṣads (fixed); **Rāmcharitmānas — 823 colliding IDs (open)**. Because the indexer uses `verse_id` as the Qdrant point ID (`indexer.py:211`, hashed in `vector_store.py:126`), **duplicate IDs silently overwrite points** → ~823 Rāmcharitmānas verses would be dropped on reindex.
+- **Parser ID-collapse bugs:** Upaniṣads had already been fixed; Rāmcharitmānas still had 823 colliding IDs at decision time. Follow-up execution also found duplicate IDs in Yajurveda and Valmiki Rāmāyaṇa source data. Because the indexer uses `verse_id` as the Qdrant point ID (`indexer.py:211`, hashed in `vector_store.py:126`), **duplicate IDs silently overwrite points** during reindex.
 - A **circular build**: `english-v1-rag/build_english_verses.py` reads English *from* `final/verses_enriched.json`, which `merge_english.py` *writes to* — this fossilized corruption into `verses_english_only.json`.
-- The indexer embeds `translation > transliteration > sanskrit` (`indexer.py:31`), so **English currently dominates dense ranking** — it is not display-only.
-- `final/metadata.json` is stale (reports 118,358 vs 214,580 actual; the UI reads it for totals at `app_factory.py:428`).
+- At decision time, the indexer embedded `translation > transliteration > sanskrit` (`indexer.py:31`), so **English dominated dense ranking** — it was not display-only.
+- `final/metadata.json` was stale at decision time (reported 118,358 vs 214,580 actual; the UI reads it for totals at `app_factory.py:428`).
 
 **Question:** should the corpus be **English-augmented** (keep ~214k, English as a primary retrieval signal) or **Sanskrit-first** (~118k authoritative Sanskrit, English supplementary at most)?
 
@@ -48,7 +48,16 @@ Three independent analyses converged on Sanskrit-first:
 - Add duplicate-ID and metadata-count guards; regenerate `final/metadata.json`.
 - Reindex Qdrant.
 
-**Key risk — IAST/transliteration normalization.** `krishna` / `kṛṣṇa` / `शिव` fracture lexical (BM25) matching. Requires a Devanāgarī ↔ IAST ↔ Harvard-Kyoto normalizer on both corpus and query. This is the main *new* engineering, not the data cull.
+**Implementation status (2026-05-25):**
+- Phase 1/1.5 completed in `ad5cc76`: Rāmcharitmānas kaand normalization fixed, Upaniṣad fallback removed, a global duplicate-ID assertion added, and Yajurveda/Valmiki Rāmāyaṇa duplicate source IDs disambiguated.
+- Phase 2 regenerated `final/` from patched parsers: `final/verses.json`, `final/verses_enriched.json`, and `final/metadata.json` now contain **118,338** records with **0 duplicate IDs** on disk.
+- Phase 3 severed the circular English build: `merge_english.py` and the Dutt append downloader were removed, and the English beta builder no longer reads from canonical `final/`.
+- Phase 5 switched the Qdrant indexer to Sanskrit-first concatenated embedding text (`sanskrit + transliteration + translation`), while preserving translation-only beta indexing behavior.
+- Phase 6 implemented a lightweight BM25 alias layer: sparse index/query text now expands Devanāgarī → IAST plus diacritic-stripped/common ASCII forms (`कृष्ण`, `kṛṣṇa`, `krsna`, `krishna`; `mokṣa`, `moksha`). Dense embedding queries remain provider-native.
+- Phase 7 preflight added exact Qdrant point-count assertions for verse/commentary chunks. The regenerated corpus should index to **132,285** points (118,338 verses + 13,947 commentaries).
+- Still open: reindex Qdrant.
+
+**Key risk — IAST/transliteration normalization.** `krishna` / `kṛṣṇa` / `शिव` fracture lexical (BM25) matching. The implemented mitigation is BM25-only alias expansion on both corpus and query text. It uses `indic-transliteration` for Devanāgarī → IAST and local ASCII/common-spelling folds for Sanskrit terms. Full Harvard-Kyoto/Aksharamukha-style normalization remains unnecessary unless retrieval tests show a concrete gap after reindex.
 
 ## Alternatives considered
 

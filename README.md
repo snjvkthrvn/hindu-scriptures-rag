@@ -7,19 +7,19 @@ A retrieval-augmented chat interface over a 118k-verse corpus of Hindu scripture
 
 ## Corpus
 
-`final/verses_enriched.json` — 118,358 verses, schema-validated.
+`final/verses_enriched.json` — 118,338 verses, schema-validated.
 
 | Scripture | Verses | Source |
 |---|---:|---|
 | Bhagavad Gita | 701 | DharmicData (GitHub) |
 | 10 Principal Upanishads | 546 | indian-scriptures (GitHub) — partial; see caveat below |
 | Rigveda | 10,200 | DharmicData |
-| Atharvaveda | 6,079 | DharmicData |
-| Yajurveda | 2,027 | DharmicData |
+| Atharvaveda | 6,121 | DharmicData |
+| Yajurveda | 1,965 | DharmicData |
 | Mahabharata (Critical Edition) | 73,816 | DharmicData |
 | Valmiki Ramayana | 22,742 | DharmicData |
 | Ramcharitmanas | 2,247 | DharmicData |
-| **Total** | **118,358** | |
+| **Total** | **118,338** | |
 
 The pipeline also extracts **13,947 commentary entries** alongside the verses.
 
@@ -40,7 +40,7 @@ Both routes hit the same `/api/query` and `/api/agent/stream` endpoints (the bet
 
 ### Retrieval
 
-- **Vector store:** Qdrant (hybrid: dense + BM25 sparse). The free Cohere embedding model `embed-multilingual-v3.0` (1,024 dims) is the default; English-only deployments can swap to `embed-english-v3.0`.
+- **Vector store:** Qdrant (hybrid: dense + BM25 sparse). The full Sanskrit-first corpus defaults to Google `gemini-embedding-2` at 1,536 dimensions, with Gemini's prompt-based retrieval prefixes at index and query time. The English-only beta remains on Cohere unless configured otherwise.
 - **Hybrid router** in [`scripts/rag/hybrid_router.py`](scripts/rag/hybrid_router.py): plain-English questions default to the English corpus; verse refs, Devanagari, transliteration, commentary/school signals route to the full corpus. Weak first-pass evidence escalates to both, fused with Reciprocal Rank Fusion.
 - **Two query modes:** one-shot RAG (`query.py` — retrieve once, answer) and ReAct agent (`agent/react_loop.py` — iterative tool use across `search_scriptures`, `search_commentaries`, `get_verse`, `compare_schools`, `search_story`).
 
@@ -54,7 +54,7 @@ User input and tool results are wrapped in `<<<UNTRUSTED_USER ...>>>` and `<<<TO
 git clone https://github.com/snjvkthrvn/hindu-scriptures-rag.git
 cd hindu-scriptures-rag
 
-cp .env.example .env       # set ANTHROPIC_API_KEY, COHERE_API_KEY (and optional auth vars)
+cp .env.example .env       # set ANTHROPIC_API_KEY, GEMINI_API_KEY, COHERE_API_KEY for /beta
 make deploy                # docker compose up: Qdrant + rag service + Caddy
 make deploy-index          # one-time: embed verses into Qdrant
 ```
@@ -117,7 +117,7 @@ The older orchestrator `scripts/main.py` (driven by the Makefile) chains the sam
 │       ├── api_security.py        # input/output sanitization
 │       ├── auth_backend.py        # session + API key auth
 │       ├── config.py              # RAGConfig
-│       ├── embeddings.py          # Cohere client
+│       ├── embeddings.py          # Gemini/Cohere embedding clients
 │       ├── vector_store.py        # Qdrant wrapper
 │       ├── indexer.py, ingest.py  # build the Qdrant collection
 │       ├── search.py              # hybrid retrieval

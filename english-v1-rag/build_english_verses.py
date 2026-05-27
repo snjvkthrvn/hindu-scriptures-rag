@@ -10,7 +10,6 @@ Aggregates:
 - raw/sacred-texts/yoga_sutras.html (parsers)
 - raw/gutenberg/pg2388_bhagavad_gita.txt (Arnold Gita)
 - raw/gutenberg/pg15474_mahabharata.txt (Ganguli Mahabharata)
-- final/verses_enriched.json (Claude-translated Upanishads)
 
 Output: english-v1-rag/verses_english_only.json
 """
@@ -64,15 +63,6 @@ def has_translation(verse: dict) -> bool:
     """True if verse has a non-empty English translation."""
     trans = (verse.get("content") or {}).get("translation") or ""
     return bool(trans.strip())
-
-
-def _is_english_text(text: str) -> bool:
-    """True if text appears to be English (not Sanskrit/Devanagari)."""
-    if not text or len(text) < 10:
-        return False
-    # Devanagari range – if present, likely Sanskrit
-    devanagari = sum(1 for c in text if "\u0900" <= c <= "\u097f")
-    return devanagari < len(text) * 0.1
 
 
 def load_rigveda() -> list:
@@ -136,69 +126,6 @@ def load_mahabharata_ganguli() -> list:
     if not path.exists():
         return []
     return [normalize_verse(v) for v in parse_mahabharata_ganguli(path) if has_translation(v)]
-
-
-def load_claude_upanishads() -> list:
-    """Load Claude-translated Upanishads from final/verses_enriched.json.
-
-    Covers: Isha, Kena, Katha, Prashna, Mundaka, Mandukya, Taittiriya,
-    Aitareya, Brihadaranyaka, Svetasvatara (from translate_verses.py).
-    Verse numbers inferred from order (source often has duplicate verse ids).
-    """
-    path = PROJECT_ROOT / "final" / "verses_enriched.json"
-    if not path.exists():
-        return []
-    with open(path) as f:
-        verses = json.load(f)
-    out = []
-    verse_counter: dict[str, int] = {}
-    for v in verses:
-        src = v.get("source") or {}
-        if not isinstance(src, dict):
-            continue
-        text_name = (src.get("text") or "").strip()
-        if "Upanishad" not in text_name:
-            continue
-        trans = (v.get("content") or {}).get("translation") or ""
-        trans = trans.strip()
-        if not trans or not _is_english_text(trans):
-            continue
-        # Assign verse number by order within each Upanishad
-        verse_counter[text_name] = verse_counter.get(text_name, 0) + 1
-        vn = verse_counter[text_name]
-        slug = text_name.lower().replace(" ", "_")
-        vid = f"up_claude_{slug}_{vn}"
-        out.append(
-            normalize_verse(
-                {
-                    "id": vid,
-                    "source": {
-                        "text": f"{text_name} (Claude)",
-                        "chapter": src.get("chapter") or 1,
-                        "chapter_name": src.get("chapter_name") or text_name,
-                        "verse": vn,
-                    },
-                    "content": {
-                        "sanskrit": (v.get("content") or {}).get("sanskrit", ""),
-                        "transliteration": "",
-                        "translation": trans,
-                    },
-                    "metadata": {
-                        "category": "shruti",
-                        "tradition": "vedanta",
-                        "themes": ["upanishad", slug],
-                    },
-                    "commentaries": v.get("commentaries", []),
-                    "provenance": {
-                        "download_source": "final",
-                        "translator": "Claude (Anthropic)",
-                        "license": "Project",
-                        "processed_date": datetime.now(timezone.utc).isoformat(),
-                    },
-                }
-            )
-        )
-    return out
 
 
 def load_upanishad_csv(csv_path: Path, upanishad_name: str) -> list:
@@ -282,11 +209,6 @@ def main():
         mundaka = load_upanishad_csv(mundaka_path, "Mundaka Upanishad")
         all_verses.extend(mundaka)
         print(f"Mundaka Upanishad: {len(mundaka):,} verses")
-
-    # Claude-translated Upanishads (Kena, Katha, Prashna, Mandukya, Taittiriya, etc.)
-    claude_up = load_claude_upanishads()
-    all_verses.extend(claude_up)
-    print(f"Upanishads (Claude): {len(claude_up):,} verses")
 
     # Yoga Sutras
     ys = load_yoga_sutras()

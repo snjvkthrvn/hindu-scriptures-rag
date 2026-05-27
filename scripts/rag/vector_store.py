@@ -1,4 +1,4 @@
-"""Qdrant vector store with dense (Cohere) + sparse (BM25) vectors.
+"""Qdrant vector store with dense embeddings + sparse BM25 vectors.
 
 Uses Qdrant server (Docker) when QDRANT_URL is set, else runs in-process local storage.
 """
@@ -38,6 +38,7 @@ class QdrantStore:
             self.client = QdrantClient(
                 url=config.qdrant_url,
                 api_key=config.qdrant_api_key,
+                timeout=config.qdrant_timeout_sec,
             )
         else:
             # In-process Qdrant (persists to disk)
@@ -66,7 +67,7 @@ class QdrantStore:
             collection_name=self.collection,
             vectors_config={
                 "dense": VectorParams(
-                    size=self.config.cohere_dims,
+                    size=self.config.embedding_dims,
                     distance=Distance.COSINE,
                 ),
             },
@@ -107,6 +108,28 @@ class QdrantStore:
         info = self.client.get_collection(self.collection)
         return info.points_count
 
+    def count_exact(self, query_filter: models.Filter | None = None) -> int:
+        """Return an exact point count, optionally filtered by payload."""
+        result = self.client.count(
+            collection_name=self.collection,
+            count_filter=query_filter,
+            exact=True,
+        )
+        return result.count
+
+    def count_by_chunk_type(self, chunk_type: str) -> int:
+        """Return exact count for verse/commentary chunks."""
+        return self.count_exact(
+            models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="chunk_type",
+                        match=models.MatchValue(value=chunk_type),
+                    )
+                ]
+            )
+        )
+
     def upsert_batch(
         self,
         ids: list[str],
@@ -146,7 +169,7 @@ class QdrantStore:
         limit: int = 10,
         query_filter: models.Filter | None = None,
     ) -> list[models.ScoredPoint]:
-        """Dense-only search (Cohere embeddings)."""
+        """Dense-only search."""
         return self.client.query_points(
             collection_name=self.collection,
             query=query_vector,

@@ -55,6 +55,7 @@ qdrant_data/
 
 # Large JSON files
 final/*.json
+final/*.json.*
 raw/
 
 # Virtual environments

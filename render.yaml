@@ -8,12 +8,18 @@ services:
     envVars:
       - key: COHERE_API_KEY
         sync: false
+      - key: GEMINI_API_KEY
+        sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: QDRANT_URL
         sync: false
       - key: QDRANT_API_KEY
         sync: false
+      - key: EMBEDDING_PROVIDER
+        value: cohere
+      - key: EMBEDDING_DIMS
+        value: "1024"
       - key: RAG_WARMUP
         value: "1"
 
@@ -24,7 +30,7 @@ services:
     dockerfilePath: ./Dockerfile
     dockerCommand: sh -c "cd /app/scripts/rag && gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - app:app"
     envVars:
-      - key: COHERE_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
@@ -32,5 +38,9 @@ services:
         sync: false
       - key: QDRANT_API_KEY
         sync: false
+      - key: EMBEDDING_PROVIDER
+        value: gemini
+      - key: EMBEDDING_DIMS
+        value: "1536"
       - key: RAG_WARMUP
         value: "1"

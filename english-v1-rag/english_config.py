@@ -20,7 +20,7 @@ if _rag_dir not in sys.path:
     idx = sys.path.index(_eng_dir) + 1
     sys.path.insert(idx, _rag_dir)
 
-from config import PROJECT_ROOT, RAGConfig  # noqa: E402
+from config import PROJECT_ROOT, RAGConfig, EmbeddingProvider  # noqa: E402
 
 ENGLISH_RAG_DIR = Path(__file__).resolve().parent
 ENGLISH_VERSES_FILE = ENGLISH_RAG_DIR / "verses_english_only.json"
@@ -30,6 +30,8 @@ FULL_VERSES_FILE = PROJECT_ROOT / "final" / "verses_enriched.json"
 def get_english_config(**overrides) -> RAGConfig:
     """Return a RAGConfig pre-configured for the English-only collection."""
     defaults = {
+        "embedding_provider": EmbeddingProvider.COHERE,
+        "embedding_dims": 1024,
         "qdrant_collection": "hindu_scriptures_english",
         "verses_file": ENGLISH_VERSES_FILE,
         "cohere_model": "embed-english-v3.0",
@@ -41,8 +43,11 @@ def get_english_config(**overrides) -> RAGConfig:
 def get_full_corpus_config(base_config: RAGConfig | None = None, **overrides) -> RAGConfig:
     """Return a full-corpus config derived from the caller config."""
     full_defaults = {
+        "embedding_provider": EmbeddingProvider.GEMINI,
+        "embedding_dims": 1536,
         "qdrant_collection": "hindu_scriptures",
         "verses_file": FULL_VERSES_FILE,
+        "gemini_model": "gemini-embedding-2",
         "cohere_model": "embed-multilingual-v3.0",
     }
     full_defaults.update(overrides)
