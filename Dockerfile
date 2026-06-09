@@ -14,8 +14,7 @@ RUN pip install --no-cache-dir -r requirements-rag.txt
 
 COPY scripts/rag/          scripts/rag/
 COPY english-v1-rag/       english-v1-rag/
-
-RUN mkdir -p final
+COPY final/metadata.json   final/metadata.json
 
 WORKDIR /app/english-v1-rag
 

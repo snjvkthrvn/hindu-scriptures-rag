@@ -28,6 +28,7 @@ from api_security import (
     is_browser_key_exposure_enabled,
     load_history_into_memory,
     auth_allows_request,
+    request_origin_matches_host,
     validate_and_prepare_question,
 )
 from flask import Blueprint, Flask, Response, current_app, jsonify, render_template, request, session, stream_with_context
@@ -136,9 +137,7 @@ def _register_rag_routes(
             return jsonify({"error": "Session password login is not enabled"}), 400
         data = request.get_json(silent=True) or {}
         got = data.get("password") or ""
-        if len(got) != len(expected):
-            return jsonify({"error": "Invalid credentials"}), 401
-        if not secrets_mod.compare_digest(got, expected):
+        if not got or not secrets_mod.compare_digest(got, expected):
             return jsonify({"error": "Invalid credentials"}), 401
         session["rag_ok"] = True
         return jsonify({"ok": True})
@@ -332,6 +331,26 @@ def _register_rag_api_key_gate(app: Flask) -> None:
         return None
 
 
+def _register_origin_guard(app: Flask) -> None:
+    """Reject state-changing API requests whose Origin/Referer is another site.
+
+    Defense-in-depth against CSRF on cookie-authenticated JSON routes (e.g.
+    PUT /api/chat/state). Requests without Origin/Referer (curl, server-to-server)
+    pass — those callers authenticate with X-API-Key instead of cookies.
+    """
+
+    @app.before_request
+    def _origin_guard():
+        if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+            return None
+        path = request.path or ""
+        if not (path.startswith("/api/") or path.startswith("/beta/api/")):
+            return None
+        if request_origin_matches_host(request):
+            return None
+        return jsonify({"error": "Cross-origin request blocked"}), 403
+
+
 def _apply_cors_and_limits(app: Flask) -> None:
     app.config["MAX_CONTENT_LENGTH"] = int(
         os.environ.get("RAG_MAX_BODY_BYTES", str(2 * 1024 * 1024))
@@ -367,6 +386,7 @@ def create_full_app() -> Flask:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
     app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
     _apply_cors_and_limits(app)
+    _register_origin_guard(app)
     register_auth(app)
     _register_rag_api_key_gate(app)
 
@@ -422,6 +442,7 @@ def create_dual_app(english_config: RAGConfig, english_filters: dict) -> Flask:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
     app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
     _apply_cors_and_limits(app)
+    _register_origin_guard(app)
     register_auth(app)
     _register_rag_api_key_gate(app)
 

@@ -81,19 +81,9 @@ def check_api_key(request: Request) -> tuple[bool, str | None]:
     if not required:
         return True, None
     got = _extract_api_key_from_request(request) or ""
-    if not got or len(got) != len(required):
-        return False, "Invalid or missing API key. Send X-API-Key or Authorization: Bearer."
-    if not hmac.compare_digest(got, required):
+    if not got or not hmac.compare_digest(got, required):
         return False, "Invalid or missing API key. Send X-API-Key or Authorization: Bearer."
     return True, None
-
-
-def get_rate_limit_key(request: Request) -> str:
-    if os.environ.get("TRUST_PROXY", "").strip() in ("1", "true", "yes"):
-        xff = request.headers.get("X-Forwarded-For", "")
-        if xff:
-            return xff.split(",")[0].strip() or (request.remote_addr or "local")
-    return request.remote_addr or "local"
 
 
 def neutralize_prompt_delimiters(text: str) -> str:

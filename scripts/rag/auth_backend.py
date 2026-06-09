@@ -44,6 +44,19 @@ limiter = Limiter(
     default_limits=["400 per day", "120 per hour"],
 )
 
+_RATE_LIMIT_EXEMPT_PREFIXES = ("/static/", "/beta/static/")
+_RATE_LIMIT_EXEMPT_PATHS = ("/", "/beta", "/beta/", "/favicon.ico", "/api/health")
+
+
+@limiter.request_filter
+def _exempt_static_and_pages() -> bool:
+    """Keep default limits for API/auth; one page load is ~10 static requests and
+    would burn through the per-IP budget if counted."""
+    if request.method not in ("GET", "HEAD"):
+        return False
+    path = request.path or ""
+    return path.startswith(_RATE_LIMIT_EXEMPT_PREFIXES) or path in _RATE_LIMIT_EXEMPT_PATHS
+
 
 def auth_required() -> bool:
     return os.environ.get("AUTH_REQUIRED", "").strip().lower() in ("1", "true", "yes")
@@ -411,8 +424,23 @@ def register_auth(app) -> None:
         app.config["SESSION_COOKIE_HTTPONLY"] = True
         app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
+    # Templates use inline <script>/<style>, so 'unsafe-inline' is required; the
+    # policy still blocks external script injection and plugin/object embedding.
+    _CSP = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' data: https://fonts.gstatic.com; "
+        "img-src 'self' data:; "
+        "connect-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'none'"
+    )
+
     @app.after_request
     def _security_headers(response):
+        response.headers.setdefault("Content-Security-Policy", _CSP)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")

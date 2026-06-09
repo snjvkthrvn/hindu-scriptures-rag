@@ -1,0 +1,33 @@
+{
+  "total_verses": 118358,
+  "by_source": {
+    "Bhagavad Gita": 701,
+    "Isha Upanishad": 18,
+    "Kena Upanishad": 37,
+    "Katha Upanishad": 71,
+    "Prashna Upanishad": 73,
+    "Mundaka Upanishad": 65,
+    "Mandukya Upanishad": 12,
+    "Taittiriya Upanishad": 20,
+    "Aitareya Upanishad": 33,
+    "Brihadaranyaka Upanishad": 104,
+    "Svetasvatara Upanishad": 113,
+    "Rigveda": 10200,
+    "Atharvaveda": 6079,
+    "Yajurveda": 2027,
+    "Mahabharata (Critical Edition)": 73816,
+    "Valmiki Ramayana": 22742,
+    "Ramcharitmanas": 2247
+  },
+  "by_category": {
+    "smriti": 2948,
+    "shruti": 18852,
+    "itihasa": 96558
+  },
+  "by_tradition": {
+    "vedanta": 1247,
+    "vedic": 18306,
+    "common": 96558,
+    "bhakti": 2247
+  }
+}

@@ -56,6 +56,8 @@ qdrant_data/
 # Large JSON files
 final/*.json
 final/*.json.*
+# Exception: corpus summary (~1 KB) needed by the web UI filter dropdowns
+!final/metadata.json
 raw/
 
 # Virtual environments
