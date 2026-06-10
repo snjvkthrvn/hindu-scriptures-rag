@@ -27,7 +27,7 @@ The pipeline also extracts **13,947 commentary entries** alongside the verses.
 
 ## Web app
 
-Two Flask processes share a backend in `scripts/rag/`. In production both serve through one Docker container on port 5002, routed by Caddy:
+Two Flask processes share a backend in `scripts/rag/`. In production (Railway) both routes serve from one Docker container on port 5002:
 
 | URL | Serves | Code path |
 |---|---|---|
@@ -55,11 +55,11 @@ git clone https://github.com/snjvkthrvn/hindu-scriptures-rag.git
 cd hindu-scriptures-rag
 
 cp .env.example .env       # set ANTHROPIC_API_KEY, GEMINI_API_KEY, COHERE_API_KEY for /beta
-make deploy                # docker compose up: Qdrant + rag service + Caddy
+make deploy                # docker compose up: Qdrant + rag service
 make deploy-index          # one-time: embed verses into Qdrant
 ```
 
-Then open `http://localhost/` (full corpus) or `http://localhost/beta` (English).
+Then open `http://localhost:5002/` (full corpus) or `http://localhost:5002/beta` (English).
 
 Stop and inspect:
 
@@ -142,7 +142,7 @@ The older orchestrator `scripts/main.py` (driven by the Makefile) chains the sam
 │   └── metadata.json              # corpus statistics
 │
 ├── raw/                           # downloaded source files (git-ignored)
-├── Caddyfile, Dockerfile, docker-compose.yml
+├── Dockerfile, docker-compose.yml, railway.json
 ├── requirements.txt               # data pipeline deps
 ├── requirements-rag.txt           # web app deps
 └── english-v1-rag/README.md, ENGLISH_RAG_SUMMARY.md
@@ -197,10 +197,10 @@ The older orchestrator `scripts/main.py` (driven by the Makefile) chains the sam
 | `OPENAI_API_KEY` | Alternative LLM, also used for moderation |
 | `COHERE_API_KEY` | Embeddings (required for indexing and query) |
 | `QDRANT_URL` | Vector store endpoint (default `http://localhost:6333` in Docker) |
-| `SESSION_PASSWORD` | If set, enables session-based login |
+| `RAG_SESSION_PASSWORD` | If set, enables session-based login |
 | `RAG_API_KEY` | Required for raw `/api/*` access from clients without a session |
 | `CORS_ORIGINS` | Comma-separated; also used by the CSRF origin guard |
-| `DOMAIN` | Caddy uses this for the `localhost` → real-host swap |
+| `FLASK_SECRET_KEY` | Required in production — without it each gunicorn worker signs sessions with its own random key |
 
 ## Licenses
 

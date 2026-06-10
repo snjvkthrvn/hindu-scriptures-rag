@@ -30,7 +30,6 @@ htmlcov/
 
 Dockerfile
 docker-compose.yml
-Caddyfile
 .dockerignore
 *.md
 LICENSE
