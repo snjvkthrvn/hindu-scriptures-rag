@@ -241,9 +241,11 @@ TOOL_DEFINITIONS = [
                         "'RV 1.1.1' (Rigveda), 'AV 1.1.1' (Atharvaveda), 'YV 1.1' (Yajurveda), "
                         "'VR 1.1.1' (Valmiki Ramayana), "
                         "'MBhCE 1.1.1' (Mahabharata Critical Edition), "
-                        "'RCM 1.1' (Ramcharitmanas), "
-                        "'Katha Up 1.2.12', 'Isha Up 1', 'Mundaka Up 1.2.3', "
-                        "'Brihad Up 1.2.3', 'Svetasvatara Up 1.1', etc. for Upanishads."
+                        "'RCM 1.1' (Ramcharitmanas). "
+                        "Upanishads use a single sequential verse number per text "
+                        "('Isha Up 1', 'Katha Up 23') — dotted Upanishad refs like "
+                        "'Katha Up 1.2.12' are NOT supported; use search_scriptures "
+                        "with a source_text filter instead."
                     ),
                 },
             },
@@ -315,13 +317,36 @@ TOOL_DEFINITIONS = [
 
 # ── Verse reference normalization ─────────────────────────────────────────
 
+# Upanishad name variants → the canonical segment used in corpus IDs
+# (upanishad_<canonical>_upanishad_<n>).
+_UPANISHAD_CANONICAL = {
+    "isha": "isha",
+    "isa": "isha",
+    "isavasya": "isha",
+    "kena": "kena",
+    "katha": "katha",
+    "prashna": "prashna",
+    "prasna": "prashna",
+    "mundaka": "mundaka",
+    "mandukya": "mandukya",
+    "taittiriya": "taittiriya",
+    "aitareya": "aitareya",
+    "brihad": "brihadaranyaka",
+    "brhad": "brihadaranyaka",
+    "brihadaranyaka": "brihadaranyaka",
+    "svetasvatara": "svetasvatara",
+    "svetashvatara": "svetasvatara",
+    "shvetashvatara": "svetasvatara",
+}
+
 
 def normalize_verse_ref(ref: str) -> str:
     """Convert human-friendly refs like 'BG 2.47' to internal IDs like 'bg_2_47'.
 
     Supports all texts in the corpus:
       BG 2.47, RV 1.1.1, AV 1.1.1, YV 1.1, VR 1.1.1, MBhCE 1.1.1,
-      RCM 1.1, Isha Up 1, Kena Up 1.1, Katha Up 1.2.12, etc.
+      RCM 1.1, and Upanishads by sequential verse number ('Isha Up 1',
+      'Katha Up 23' — the corpus numbers each Upanishad's verses 1..N).
     """
     ref = ref.strip()
 
@@ -344,10 +369,10 @@ def normalize_verse_ref(ref: str) -> str:
     if m:
         return f"av_{m.group(1)}_{m.group(2)}_{m.group(3)}"
 
-    # YV 1.1 → yv_1_1 (Yajurveda)
+    # YV 1.1 → yv_madhyadina_1_1 (Yajurveda — corpus holds the Madhyandina recension)
     m = re.match(r"YV\s+(\d+)\.(\d+)", ref, re.IGNORECASE)
     if m:
-        return f"yv_{m.group(1)}_{m.group(2)}"
+        return f"yv_madhyadina_{m.group(1)}_{m.group(2)}"
 
     # VR 1.1.1 → vr_1_1_1 (Valmiki Ramayana)
     m = re.match(r"VR\s+(\d+)\.(\d+)\.(\d+)", ref, re.IGNORECASE)
@@ -365,69 +390,16 @@ def normalize_verse_ref(ref: str) -> str:
         return f"rcm_{m.group(1)}_{m.group(2)}"
 
     # --- Upanishads ---
-    # Generic pattern: "XYZ Upanishad 1.2.3" or "XYZ Up 1.2.3" or "XYZ Up. 1.2"
-    # Isha Upanishad (single numbering: verse N)
-    m = re.match(r"Isha\s+(?:Up(?:anishad)?\.?\s+)?(\d+)", ref, re.IGNORECASE)
+    # Corpus IDs are flat per-Upanishad sequence numbers
+    # (upanishad_<name>_upanishad_<n>) — the indian-scriptures source carries no
+    # valli/section structure. Accept "<Name> [Up[anishad]] N" with a single
+    # number; dotted refs like "Katha Up 1.2.12" cannot be mapped and fall
+    # through to the generic fallback (which will find nothing).
+    m = re.match(r"([A-Za-z]+)\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\s*$", ref, re.IGNORECASE)
     if m:
-        return f"isha_{m.group(1)}"
-
-    # Kena Upanishad (section.verse)
-    m = re.match(r"Kena\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
-    if m:
-        return f"kena_{m.group(1)}_{m.group(2)}"
-
-    # Katha Upanishad (valli.section.verse or section.verse)
-    m = re.match(r"Katha\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)\.(\d+)", ref, re.IGNORECASE)
-    if m:
-        return f"katha_{m.group(1)}_{m.group(2)}_{m.group(3)}"
-    m = re.match(r"Katha\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
-    if m:
-        return f"katha_{m.group(1)}_{m.group(2)}"
-
-    # Prashna Upanishad (prashna.verse)
-    m = re.match(r"Prashna\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
-    if m:
-        return f"prashna_{m.group(1)}_{m.group(2)}"
-
-    # Mundaka Upanishad (mundaka.section.verse)
-    m = re.match(r"Mundaka\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)\.(\d+)", ref, re.IGNORECASE)
-    if m:
-        return f"mundaka_{m.group(1)}_{m.group(2)}_{m.group(3)}"
-    m = re.match(r"Mundaka\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
-    if m:
-        return f"mundaka_{m.group(1)}_{m.group(2)}"
-
-    # Mandukya Upanishad (verse)
-    m = re.match(r"Mandukya\s+(?:Up(?:anishad)?\.?\s+)?(\d+)", ref, re.IGNORECASE)
-    if m:
-        return f"mandukya_{m.group(1)}"
-
-    # Taittiriya Upanishad (valli.anuvaka)
-    m = re.match(r"Taittiriya\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
-    if m:
-        return f"taittiriya_{m.group(1)}_{m.group(2)}"
-
-    # Aitareya Upanishad (section.verse)
-    m = re.match(r"Aitareya\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
-    if m:
-        return f"aitareya_{m.group(1)}_{m.group(2)}"
-
-    # Brihadaranyaka Upanishad (adhyaya.brahmana.verse)
-    m = re.match(
-        r"Bri?had(?:aranyaka)?\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)\.(\d+)", ref, re.IGNORECASE
-    )
-    if m:
-        return f"brihad_{m.group(1)}_{m.group(2)}_{m.group(3)}"
-    m = re.match(
-        r"Bri?had(?:aranyaka)?\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE
-    )
-    if m:
-        return f"brihad_{m.group(1)}_{m.group(2)}"
-
-    # Svetasvatara Upanishad (chapter.verse)
-    m = re.match(r"Sveta?s?vatara\s+(?:Up(?:anishad)?\.?\s+)?(\d+)\.(\d+)", ref, re.IGNORECASE)
-    if m:
-        return f"svetasvatara_{m.group(1)}_{m.group(2)}"
+        canonical = _UPANISHAD_CANONICAL.get(m.group(1).lower())
+        if canonical:
+            return f"upanishad_{canonical}_upanishad_{m.group(2)}"
 
     # Fallback: replace dots and spaces with underscores, lowercase
     return ref.lower().replace(" ", "_").replace(".", "_")
