@@ -7,7 +7,7 @@ from typing import Protocol
 
 import cohere
 import cohere.core
-from config import RAGConfig, EmbeddingProvider
+from config import EmbeddingProvider, RAGConfig
 
 
 def format_gemini_query(text: str) -> str:
@@ -58,14 +58,8 @@ class GeminiEmbedder:
 
         contents = []
         for text in texts:
-            formatted = (
-                format_gemini_query(text)
-                if as_query
-                else format_gemini_document(text)
-            )
-            contents.append(
-                self.types.Content(parts=[self.types.Part.from_text(text=formatted)])
-            )
+            formatted = format_gemini_query(text) if as_query else format_gemini_document(text)
+            contents.append(self.types.Content(parts=[self.types.Part.from_text(text=formatted)]))
 
         config = self.types.EmbedContentConfig(output_dimensionality=self.dims)
         max_retries = 8

@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from config import RAGConfig
-from search import search
-
 from hybrid_router import RetrievalMode, route_question, should_escalate
+from search import search
 
 _RRF_K = 60
 
@@ -53,7 +52,9 @@ def dedupe_results(results: list[dict]) -> list[dict]:
     return list(deduped.values())
 
 
-def fuse_ranked_results(english_results: list[dict], full_results: list[dict], top_k: int) -> list[dict]:
+def fuse_ranked_results(
+    english_results: list[dict], full_results: list[dict], top_k: int
+) -> list[dict]:
     scored: dict[tuple[str, str, str], dict] = {}
 
     for corpus, corpus_results in (
@@ -136,7 +137,9 @@ def hybrid_search(
         except Exception as exc:  # pragma: no cover - behavior tested via fallback
             english_error = exc
             mode = RetrievalMode.BOTH
-        if english_error is None and not should_escalate(question, mode, english_results, english_config.top_k):
+        if english_error is None and not should_escalate(
+            question, mode, english_results, english_config.top_k
+        ):
             return english_results, mode.value
         full_filter_dict = _secondary_filter_dict(filter_dict)
     elif mode == RetrievalMode.FULL:
@@ -145,7 +148,9 @@ def hybrid_search(
         except Exception as exc:  # pragma: no cover - behavior tested via fallback
             full_error = exc
             mode = RetrievalMode.BOTH
-        if full_error is None and not should_escalate(question, mode, full_results, full_config.top_k):
+        if full_error is None and not should_escalate(
+            question, mode, full_results, full_config.top_k
+        ):
             return full_results, mode.value
         english_filter_dict = _secondary_filter_dict(filter_dict)
 

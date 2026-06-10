@@ -45,6 +45,7 @@ ignore = [
 "english-v1-rag/index_english.py" = ["E402"]
 "scripts/rag/agent/react_loop.py" = ["E402"]
 "scripts/rag/agent/tools.py" = ["E402"]
+"tests/**" = ["E402"]  # tests insert scripts/rag on sys.path before importing
 
 [tool.ruff.format]
 quote-style = "double"

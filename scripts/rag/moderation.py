@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 
-from config import RAGConfig, LLMProvider
+from config import LLMProvider, RAGConfig
 
 # API key shapes (broad) — only redact when pattern matches; reduce accidental leaks in answers.
 _PATTERNS = [
@@ -61,9 +61,7 @@ def _anthropic_fast_unsafe_check(text: str, config: RAGConfig) -> bool:
             messages=[{"role": "user", "content": sample}],
             **_anthropic_extras(),
         )
-        out = "".join(
-            b.text for b in resp.content if getattr(b, "type", None) == "text"
-        )
+        out = "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
     except Exception:
         return False
 

@@ -10,28 +10,37 @@ import importlib.util
 import json
 import os
 import secrets
+import secrets as secrets_mod
 import sys
 import threading
 from dataclasses import replace
 from pathlib import Path
 from types import ModuleType
 
-import secrets as secrets_mod
-
-from auth_backend import register_auth
-from config import PROJECT_ROOT, RAGConfig
 from api_security import (
     UserInputError,
+    auth_allows_request,
     build_json_error,
     get_required_api_key,
     get_session_password,
     is_browser_key_exposure_enabled,
     load_history_into_memory,
-    auth_allows_request,
     request_origin_matches_host,
     validate_and_prepare_question,
 )
-from flask import Blueprint, Flask, Response, current_app, jsonify, render_template, request, session, stream_with_context
+from auth_backend import register_auth
+from config import PROJECT_ROOT, RAGConfig
+from flask import (
+    Blueprint,
+    Flask,
+    Response,
+    current_app,
+    jsonify,
+    render_template,
+    request,
+    session,
+    stream_with_context,
+)
 from voices import VOICES
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -240,7 +249,11 @@ def _register_rag_routes(
                     yield f"data: {json.dumps(event)}\n\n"
             except Exception as e:
                 current_app.logger.exception("agent stream failed")
-                msg = "Request failed" if not current_app.debug else f"Request failed: {type(e).__name__}"
+                msg = (
+                    "Request failed"
+                    if not current_app.debug
+                    else f"Request failed: {type(e).__name__}"
+                )
                 yield f"data: {json.dumps({'type': 'error', 'content': msg})}\n\n"
 
         return Response(

@@ -28,7 +28,9 @@ class EnglishAgentHybridToolTests(unittest.TestCase):
             side_effect=AssertionError("direct search should not be called"),
             create=True,
         ):
-            result = _exec_search_scriptures({"query": "What is dharma?"}, config=get_english_config())
+            result = _exec_search_scriptures(
+                {"query": "What is dharma?"}, config=get_english_config()
+            )
 
         self.assertEqual(result, "formatted scriptures")
         mock_hybrid_search.assert_called_once()
@@ -50,7 +52,9 @@ class EnglishAgentHybridToolTests(unittest.TestCase):
             side_effect=AssertionError("direct search should not be called"),
             create=True,
         ):
-            result = _exec_search_commentaries({"query": "Advaita on duty"}, config=get_english_config())
+            result = _exec_search_commentaries(
+                {"query": "Advaita on duty"}, config=get_english_config()
+            )
 
         self.assertEqual(result, "formatted commentaries")
         mock_hybrid_search.assert_called_once()

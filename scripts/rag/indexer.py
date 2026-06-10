@@ -205,11 +205,13 @@ def index(config: RAGConfig | None = None, resume: bool = False) -> None:
 
         # BM25 text: combine Sanskrit + transliteration + translation for term matching
         content = verse.get("content", {})
-        bm25_text = build_sparse_text([
-            content.get("sanskrit", ""),
-            content.get("transliteration", ""),
-            content.get("translation", ""),
-        ])
+        bm25_text = build_sparse_text(
+            [
+                content.get("sanskrit", ""),
+                content.get("transliteration", ""),
+                content.get("translation", ""),
+            ]
+        )
 
         verse_chunks.append((verse_id, embeddable, bm25_text, payload))
 

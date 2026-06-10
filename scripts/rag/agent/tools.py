@@ -39,7 +39,7 @@ _VALID_SCHOOLS = {
 
 
 def _str_arg(input_data: dict, key: str, max_len: int) -> str:
-    """Coerce a tool argument to a bounded string. Non-strings return ''. """
+    """Coerce a tool argument to a bounded string. Non-strings return ''."""
     v = input_data.get(key)
     if v is None:
         return ""
@@ -63,6 +63,7 @@ def _truncate_for_model(text: str) -> str:
     if len(text) <= _TOOL_MAX_RESULT_CHARS:
         return text
     return text[:_TOOL_MAX_RESULT_CHARS] + "\n[...truncated...]"
+
 
 # ── Source name aliases → canonical names (as in verses_enriched.json) ────
 

@@ -16,7 +16,6 @@ os.environ["QDRANT_URL"] = ""
 
 from indexer import index  # noqa: E402
 
-
 if __name__ == "__main__":
     # Pass --resume to continue from the per-batch checkpoint after an
     # interruption; without it the collection is dropped and rebuilt fresh.

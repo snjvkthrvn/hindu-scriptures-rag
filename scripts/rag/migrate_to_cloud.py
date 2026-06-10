@@ -16,6 +16,7 @@ Run:
     # optional: --collection <name>   (default: hindu_scriptures)
     # optional: --batch <n>           (default: 500)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -40,8 +41,9 @@ def fail(msg: str) -> int:
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--collection", default="hindu_scriptures")
-    p.add_argument("--batch", type=int, default=500,
-                   help="Points per scroll/upsert batch (default: 500)")
+    p.add_argument(
+        "--batch", type=int, default=500, help="Points per scroll/upsert batch (default: 500)"
+    )
     args = p.parse_args()
 
     cloud_url = (os.environ.get("CLOUD_QDRANT_URL") or "").rstrip("/")
@@ -117,18 +119,17 @@ def main() -> int:
             break
 
         # Records → PointStructs (upsert needs PointStruct, scroll returns Record)
-        points = [
-            PointStruct(id=r.id, vector=r.vector, payload=r.payload)
-            for r in records
-        ]
+        points = [PointStruct(id=r.id, vector=r.vector, payload=r.payload) for r in records]
         cloud.upsert(collection_name=coll, points=points, wait=True)
 
         moved += len(points)
         elapsed = time.time() - t0
         rate = moved / elapsed if elapsed > 0 else 0
         eta_min = (n_local - moved) / rate / 60 if rate > 0 else 0
-        print(f"  {moved:>7,}/{n_local:,}  ({100 * moved / n_local:5.1f}%)  "
-              f"rate={rate:.0f} pts/s  eta={eta_min:.1f} min")
+        print(
+            f"  {moved:>7,}/{n_local:,}  ({100 * moved / n_local:5.1f}%)  "
+            f"rate={rate:.0f} pts/s  eta={eta_min:.1f} min"
+        )
 
         offset = next_offset
         if offset is None:
@@ -137,18 +138,20 @@ def main() -> int:
     print(f"      copy done in {time.time() - t0:.1f}s")
 
     # Verify
-    print(f"\n[3/3] Verifying Cloud collection...")
+    print("\n[3/3] Verifying Cloud collection...")
     time.sleep(3)  # let Cloud's optimizers settle before exact count
     n_cloud = cloud.count(collection_name=coll, exact=True).count
     cloud_info = cloud.get_collection(coll)
     cloud_dim = cloud_info.config.params.vectors["dense"].size
-    print(f"      Cloud '{coll}': {n_cloud:,} points (exact), dim={cloud_dim}, "
-          f"status={cloud_info.status}")
+    print(
+        f"      Cloud '{coll}': {n_cloud:,} points (exact), dim={cloud_dim}, "
+        f"status={cloud_info.status}"
+    )
     if n_cloud != n_local:
         return fail(f"point count mismatch (local {n_local:,} vs cloud {n_cloud:,})")
 
     print(f"\n✓ Migration complete: {n_local:,} points live on Cloud.")
-    print(f"  Railway 'main' service will see them on the next search — no redeploy needed.")
+    print("  Railway 'main' service will see them on the next search — no redeploy needed.")
     return 0
 
 

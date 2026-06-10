@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import json
 import re
-import sys
 import time
 from datetime import datetime, timezone
 from html.parser import HTMLParser
@@ -38,9 +37,7 @@ from urllib.request import Request, urlopen
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 OUTPUT_FILE = PROJECT_ROOT / "raw" / "wikisource" / "vedanta_classics.json"
 
-USER_AGENT = (
-    "hindu-scriptures-rag/0.1 (research, contact: sanjeevkathiravanpro@gmail.com)"
-)
+USER_AGENT = "hindu-scriptures-rag/0.1 (research, contact: sanjeevkathiravanpro@gmail.com)"
 REQUEST_DELAY_SEC = 0.5
 
 # Each target = (slug, source_text_label, id_prefix, metadata, translator).
@@ -53,7 +50,11 @@ TARGETS = [
         "Ashtavakra_Gita",
         "Ashtavakra Gita",
         "ashtavakra",
-        {"category": "smriti", "tradition": "vedanta", "themes": ["advaita", "knowledge", "liberation"]},
+        {
+            "category": "smriti",
+            "tradition": "vedanta",
+            "themes": ["advaita", "knowledge", "liberation"],
+        },
         "John Henry Richards",
     ),
 ]
@@ -67,6 +68,7 @@ def fetch(url: str) -> str:
 
 # ────────────────────────────────────────────────────────────────────────────
 # HTML walker: split text between consecutive .wst-verse anchors
+
 
 class _WstVerseExtractor(HTMLParser):
     """Collect (id, text) pairs by treating each <span class~='wst-verse'> as
@@ -144,9 +146,17 @@ def extract_wst_verses(html: str) -> list[tuple[str, str]]:
 # ────────────────────────────────────────────────────────────────────────────
 # Verse-record assembly (main-corpus schema)
 
-def build_record(source_text: str, id_prefix: str, chapter: int, verse: int,
-                 translation: str, metadata: dict, translator: str,
-                 source_path: str) -> dict:
+
+def build_record(
+    source_text: str,
+    id_prefix: str,
+    chapter: int,
+    verse: int,
+    translation: str,
+    metadata: dict,
+    translator: str,
+    source_path: str,
+) -> dict:
     return {
         "id": f"{id_prefix}_{chapter}_{verse}",
         "source": {
@@ -174,6 +184,7 @@ def build_record(source_text: str, id_prefix: str, chapter: int, verse: int,
 
 # ────────────────────────────────────────────────────────────────────────────
 # Main
+
 
 def main() -> int:
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)

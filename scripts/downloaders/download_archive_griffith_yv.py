@@ -36,7 +36,6 @@ from __future__ import annotations
 
 import json
 import re
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -53,6 +52,7 @@ USER_AGENT = "hindu-scriptures-rag/0.1 (research, contact: sanjeevkathiravanpro@
 
 # ────────────────────────────────────────────────────────────────────────────
 # Fetch (with on-disk cache so we don't keep re-downloading 862KB)
+
 
 def fetch_djvu() -> str:
     if CACHE_FILE.exists():
@@ -89,12 +89,55 @@ def roman_to_int(s: str) -> int | None:
 
 
 ORDINALS_MAP = {
-    "FIRST": 1, "SECOND": 2, "THIRD": 3, "FOURTH": 4, "FIFTH": 5, "SIXTH": 6, "SEVENTH": 7, "EIGHTH": 8, "NINTH": 9, "TENTH": 10,
-    "ELEVENTH": 11, "TWELFTH": 12, "THIRTEENTH": 13, "FOURTEENTH": 14, "FIFTEENTH": 15, "SIXTEENTH": 16, "SEVENTEENTH": 17,
-    "EIGHTEENTH": 18, "NINETEENTH": 19, "TWENTIETH": 20, "TWENTYFIRST": 21, "TWENTYSECOND": 22, "TWENTYTHIRD": 23, "TWENTYTHIR": 23, "TWENTYTHIRI": 23,
-    "TWENTYFOURTH": 24, "TWENTYFOUKTB": 24, "TWENTYFIFTH": 25, "TWENTYSIXTH": 26, "TWENTYSEVENTH": 27, "TWENTYEIGHTH": 28, "TWENTYNINTH": 29,
-    "THIRTIETH": 30, "THIRTYFIRST": 31, "THIRTYSECOND": 32, "THIRTY SECOND": 32, "THIRTYTHIRD": 33, "THIRTYFOURTH": 34, "THIRTYPOURTTF": 34, "THIRTYPOURTT": 34,
-    "THIRTYFIFTH": 35, "THIRTYSIXTH": 36, "THIRTYSEVENTH": 37, "THIRTYSSEVENTH": 37, "THIRTYEIGHTH": 38, "THIRTYEIRGFRTF": 38, "THIRTYEIRGF": 38, "THIRTYNINTH": 39, "FORTIETH": 40
+    "FIRST": 1,
+    "SECOND": 2,
+    "THIRD": 3,
+    "FOURTH": 4,
+    "FIFTH": 5,
+    "SIXTH": 6,
+    "SEVENTH": 7,
+    "EIGHTH": 8,
+    "NINTH": 9,
+    "TENTH": 10,
+    "ELEVENTH": 11,
+    "TWELFTH": 12,
+    "THIRTEENTH": 13,
+    "FOURTEENTH": 14,
+    "FIFTEENTH": 15,
+    "SIXTEENTH": 16,
+    "SEVENTEENTH": 17,
+    "EIGHTEENTH": 18,
+    "NINETEENTH": 19,
+    "TWENTIETH": 20,
+    "TWENTYFIRST": 21,
+    "TWENTYSECOND": 22,
+    "TWENTYTHIRD": 23,
+    "TWENTYTHIR": 23,
+    "TWENTYTHIRI": 23,
+    "TWENTYFOURTH": 24,
+    "TWENTYFOUKTB": 24,
+    "TWENTYFIFTH": 25,
+    "TWENTYSIXTH": 26,
+    "TWENTYSEVENTH": 27,
+    "TWENTYEIGHTH": 28,
+    "TWENTYNINTH": 29,
+    "THIRTIETH": 30,
+    "THIRTYFIRST": 31,
+    "THIRTYSECOND": 32,
+    "THIRTY SECOND": 32,
+    "THIRTYTHIRD": 33,
+    "THIRTYFOURTH": 34,
+    "THIRTYPOURTTF": 34,
+    "THIRTYPOURTT": 34,
+    "THIRTYFIFTH": 35,
+    "THIRTYSIXTH": 36,
+    "THIRTYSEVENTH": 37,
+    "THIRTYSSEVENTH": 37,
+    "THIRTYEIGHTH": 38,
+    "THIRTYEIRGFRTF": 38,
+    "THIRTYEIRGF": 38,
+    "THIRTYNINTH": 39,
+    "FORTIETH": 40,
 }
 
 
@@ -102,22 +145,22 @@ def parse_roman_or_word(word: str) -> int | None:
     """Parse Roman numerals or English ordinals (with common OCR mistakes)."""
     word = word.strip().upper()
     norm_word = re.sub(r"[^A-Z]", "", word)
-    
+
     # 1. Check exact match
     if norm_word in ORDINALS_MAP:
         return ORDINALS_MAP[norm_word]
-        
+
     # 2. Check if any ordinal is a substring (longest first)
     for ord_name in sorted(ORDINALS_MAP.keys(), key=len, reverse=True):
         if ord_name in norm_word:
             return ORDINALS_MAP[ord_name]
-            
+
     # 3. Check Roman numerals
     roman_clean = re.sub(r"[^A-Z]", "", word)
     val = roman_to_int(roman_clean)
     if val and 1 <= val <= 40:
         return val
-        
+
     return None
 
 
@@ -127,7 +170,7 @@ def parse_roman_or_word(word: str) -> int | None:
 # Match pattern for book headers, restricting the first word to variations of BOOK.
 BOOK_MARKER_RE = re.compile(
     r"^\s*(?:BOOK|BOOR|B00K|BOOE|BOOS|B00R|ftJOK|ftOOK|fiOOK|book)\s+(?:THE\s+|THK\s+|TFEIE\s+|TfeIE\s+|TfeiE\s+)?([A-Za-z\- \d_<>»\.\']+)",
-    re.IGNORECASE | re.MULTILINE
+    re.IGNORECASE | re.MULTILINE,
 )
 
 # A verse start: line containing only optional whitespace then digits then
@@ -145,11 +188,11 @@ def find_translation_start(text: str) -> int:
     """
     for m in BOOK_MARKER_RE.finditer(text):
         # Filter page headers
-        line_start = text.rfind('\n', 0, m.start()) + 1
-        line = text[line_start:m.end()]
-        if '[' in line or ']' in line:
+        line_start = text.rfind("\n", 0, m.start()) + 1
+        line = text[line_start : m.end()]
+        if "[" in line or "]" in line:
             continue
-            
+
         num = parse_roman_or_word(m.group(1))
         if num == 1 and m.start() > 30000:
             return m.start()
@@ -162,11 +205,11 @@ def split_into_books(text: str, start_offset: int) -> list[tuple[int, str]]:
     found_books: dict[int, int] = {}
     for m in markers:
         # Ignore page headers
-        line_start = text.rfind('\n', 0, m.start()) + 1
-        line = text[line_start:m.end()]
-        if '[' in line or ']' in line:
+        line_start = text.rfind("\n", 0, m.start()) + 1
+        line = text[line_start : m.end()]
+        if "[" in line or "]" in line:
             continue
-        
+
         num = parse_roman_or_word(m.group(1))
         if num is not None and 1 <= num <= 40:
             if m.start() >= start_offset:
@@ -183,7 +226,7 @@ def split_into_books(text: str, start_offset: int) -> list[tuple[int, str]]:
         start = found_books[b]
         end = found_books[sorted_nums[i + 1]] if i + 1 < len(sorted_nums) else len(text)
         books.append((b, text[start:end]))
-        
+
     return books
 
 
@@ -209,8 +252,6 @@ def extract_verses_from_book(book_text: str) -> list[tuple[int, str]]:
     out: list[tuple[int, str]] = []
     for i, m in enumerate(matches):
         verse_num = int(m.group(1))
-        start = m.end() - len(m.group(2))  # back up to start of the captured letter
-        # Actually use the digit's match-end as text start
         text_start = m.start() + len(m.group(0)) - len(m.group(2))
         end = matches[i + 1].start() if i + 1 < len(matches) else len(book_text)
         raw = book_text[text_start:end]
@@ -264,6 +305,7 @@ def build_record(adhyaya: int, verse: int, translation: str) -> dict:
 
 # ────────────────────────────────────────────────────────────────────────────
 # Main
+
 
 def main() -> int:
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)

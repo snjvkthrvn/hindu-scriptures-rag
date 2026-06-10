@@ -4,9 +4,9 @@ Adapted from scripts/rag/agent/tools.py with English corpus source aliases,
 tool descriptions, and additional verse reference patterns (YS, MBh section).
 """
 
-from dataclasses import replace
 import re
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 # Add shared RAG modules to path
@@ -16,9 +16,10 @@ if str(_rag_dir) not in sys.path:
 
 from api_security import wrap_tool_result
 from config import RAGConfig
-from english_config import get_english_config, get_full_corpus_config
 from hybrid_query import hybrid_search
 from search import format_context, search_by_verse_id, search_with_context_expansion
+
+from english_config import get_english_config, get_full_corpus_config
 
 # Hard caps on tool inputs and result size; keep parity with scripts/rag/agent/tools.py.
 _MAX_QUERY_LEN = 1000
@@ -62,6 +63,7 @@ def _truncate_for_model(text: str) -> str:
     if len(text) <= _TOOL_MAX_RESULT_CHARS:
         return text
     return text[:_TOOL_MAX_RESULT_CHARS] + "\n[...truncated...]"
+
 
 # ── Source name aliases → canonical names (as in verses_english_only.json) ──
 

@@ -52,17 +52,13 @@ class EpicAndVedaRefTests(unittest.TestCase):
 class UpanishadRefTests(unittest.TestCase):
     def test_single_number_refs_map_to_flat_ids(self):
         self.assertEqual(normalize_verse_ref("Isha Up 1"), "upanishad_isha_upanishad_1")
-        self.assertEqual(
-            normalize_verse_ref("Isha Upanishad 18"), "upanishad_isha_upanishad_18"
-        )
+        self.assertEqual(normalize_verse_ref("Isha Upanishad 18"), "upanishad_isha_upanishad_18")
         self.assertEqual(normalize_verse_ref("Katha Up 23"), "upanishad_katha_upanishad_23")
         self.assertEqual(normalize_verse_ref("Mandukya 7"), "upanishad_mandukya_upanishad_7")
         self.assertEqual(normalize_verse_ref("Isha Up. 3"), "upanishad_isha_upanishad_3")
 
     def test_name_variants_canonicalize(self):
-        self.assertEqual(
-            normalize_verse_ref("Brihad Up 5"), "upanishad_brihadaranyaka_upanishad_5"
-        )
+        self.assertEqual(normalize_verse_ref("Brihad Up 5"), "upanishad_brihadaranyaka_upanishad_5")
         self.assertEqual(
             normalize_verse_ref("Brihadaranyaka Upanishad 104"),
             "upanishad_brihadaranyaka_upanishad_104",
@@ -71,9 +67,7 @@ class UpanishadRefTests(unittest.TestCase):
             normalize_verse_ref("Shvetashvatara Up 10"),
             "upanishad_svetasvatara_upanishad_10",
         )
-        self.assertEqual(
-            normalize_verse_ref("Prasna Up 4"), "upanishad_prashna_upanishad_4"
-        )
+        self.assertEqual(normalize_verse_ref("Prasna Up 4"), "upanishad_prashna_upanishad_4")
 
     def test_dotted_upanishad_refs_are_not_mapped(self):
         # The corpus has no valli/section structure, so a dotted ref must not

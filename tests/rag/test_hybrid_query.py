@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts" / "rag"))
 
-from hybrid_router import RetrievalMode
 from hybrid_query import dedupe_results, fuse_ranked_results, hybrid_search
+from hybrid_router import RetrievalMode
 
 
 class HybridQueryTests(unittest.TestCase):
