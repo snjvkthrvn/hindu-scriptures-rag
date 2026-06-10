@@ -38,7 +38,7 @@ def _anthropic_fast_unsafe_check(text: str, config: RAGConfig) -> bool:
     if not (config.anthropic_api_key or "").strip():
         return False
 
-    model = os.environ.get("RAG_LLM_MODERATION_MODEL", "claude-3-5-haiku-20241022")
+    model = os.environ.get("RAG_LLM_MODERATION_MODEL") or config.anthropic_haiku_model
     sample = (text or "")[:12000]
     if not sample.strip():
         return False

@@ -228,6 +228,19 @@ def index(config: RAGConfig | None = None, resume: bool = False) -> None:
     print(f"  Commentary chunks: {len(commentary_chunks):,}")
     print(f"  Total: {total:,}")
 
+    # Duplicate IDs hash to the same Qdrant point ID and silently overwrite each
+    # other. The post-run count assertion would catch that too, but only after
+    # paying for the full embedding run — so fail here, before any API calls.
+    all_ids = [c[0] for c in verse_chunks] + [c[0] for c in commentary_chunks]
+    if len(set(all_ids)) != len(all_ids):
+        from collections import Counter
+
+        dups = [i for i, n in Counter(all_ids).items() if n > 1]
+        raise AssertionError(
+            f"{len(dups)} duplicate chunk ID(s) would overwrite Qdrant points "
+            f"(first few: {dups[:5]}). Fix the parsers before indexing."
+        )
+
     # Index all chunks
     all_chunks = verse_chunks + commentary_chunks
     batch_size = embedder.batch_size
