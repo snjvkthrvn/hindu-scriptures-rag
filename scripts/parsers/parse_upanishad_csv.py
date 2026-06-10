@@ -1,7 +1,6 @@
 """Parse Upanishad CSV format into unified schema."""
 
 import csv
-import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -123,15 +122,9 @@ class UpanishadCSVParser:
                     print("    Warning: Empty CSV file")
                     return verses
 
-                for row_idx, row in enumerate(reader, 1):
+                for row in reader:
                     # Extract fields (handle different column names)
                     # indian-scriptures format: title, mantra, number
-                    verse_num = (
-                        row.get("number")
-                        or row.get("verse_number")
-                        or row.get("verse")
-                        or str(row_idx)
-                    )
                     mantra = (
                         row.get("mantra") or row.get("sanskrit") or row.get("text") or ""
                     ).strip()

@@ -8,14 +8,15 @@ from api_security import validate_and_prepare_question, wrap_untrusted_user_text
 from config import LLMProvider, RAGConfig
 from hybrid_query import hybrid_search
 from moderation import (
-    check_openai_output_moderation,
     check_openai_user_moderation,
-    finalize_model_output,
 )
 from sanskrit_gloss import augment_context_with_sanskrit_gloss
 from search import format_context
 
-from english_config import get_english_config, get_full_corpus_config  # noqa: F401 — side-effect: path setup
+from english_config import (  # noqa: F401 — side-effect: path setup
+    get_english_config,
+    get_full_corpus_config,
+)
 from prompt_templates import QUERY_PROMPT_TEMPLATE, SYSTEM_PROMPT
 
 

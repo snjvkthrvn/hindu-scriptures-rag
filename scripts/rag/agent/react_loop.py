@@ -16,14 +16,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import llm as llm_module
+from api_security import load_history_into_memory, wrap_untrusted_user_text
 from config import RAGConfig
+from moderation import finalize_model_output, redact_likely_secrets
 from voices import get_voice_prompt
 
 from agent.conversation import ConversationMemory
 from agent.tools import TOOL_DEFINITIONS, execute_tool
 from prompt_templates import AGENT_SYSTEM_PROMPT
-from api_security import load_history_into_memory, wrap_untrusted_user_text
-from moderation import finalize_model_output, redact_likely_secrets
 
 
 def run_agent(
@@ -144,9 +144,7 @@ def run_agent(
 
         else:
             # Unexpected stop reason
-            answer = "".join(
-                block.text for block in response.content if block.type == "text"
-            )
+            answer = "".join(block.text for block in response.content if block.type == "text")
             answer = finalize_model_output(answer or "", config)
             return {
                 "answer": answer or "I encountered an issue processing your question.",
@@ -277,15 +275,16 @@ def run_agent_stream(
             messages.append({"role": "user", "content": tool_results})
 
         else:
-            answer = "".join(
-                block.text for block in response.content if block.type == "text"
-            )
+            answer = "".join(block.text for block in response.content if block.type == "text")
             answer = redact_likely_secrets(answer or "")
             yield {"type": "answer_chunk", "content": answer or "Something went wrong."}
             yield {"type": "done", "tool_calls": tool_calls_log}
             return
 
-    yield {"type": "answer_chunk", "content": redact_likely_secrets("Reached maximum research steps.")}
+    yield {
+        "type": "answer_chunk",
+        "content": redact_likely_secrets("Reached maximum research steps."),
+    }
     yield {"type": "done", "tool_calls": tool_calls_log}
 
 

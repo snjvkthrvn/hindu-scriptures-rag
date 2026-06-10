@@ -18,7 +18,9 @@ class HybridRouterTests(unittest.TestCase):
         self.assertEqual(route_question("What is Arjuna's backstory?"), RetrievalMode.ENGLISH)
 
     def test_plural_keyword_routes_to_full(self):
-        self.assertEqual(route_question("What do the schools say about dharma?"), RetrievalMode.FULL)
+        self.assertEqual(
+            route_question("What do the schools say about dharma?"), RetrievalMode.FULL
+        )
 
     def test_verse_ref_routes_to_full(self):
         self.assertEqual(route_question("Explain BG 2.47"), RetrievalMode.FULL)

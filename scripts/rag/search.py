@@ -29,7 +29,7 @@ def _get_embedder(config: RAGConfig) -> Embedder:
 
 
 def _get_store(config: RAGConfig) -> QdrantStore:
-    key = config.qdrant_collection
+    key = f"{config.qdrant_url or config.qdrant_path}:{config.qdrant_collection}"
     if key not in _store_cache:
         store = QdrantStore(config)
         # Eagerly load BM25 so first hybrid search isn't slow

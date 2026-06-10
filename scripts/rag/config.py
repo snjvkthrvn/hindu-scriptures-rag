@@ -159,8 +159,12 @@ class RAGConfig:
 
     # --- LLM / moderation (see moderation.py) ---
     llm_moderation_enabled: bool = field(
-        default_factory=lambda: os.environ.get("RAG_LLM_MODERATION", "").lower() in ("1", "true", "yes")
+        default_factory=lambda: (
+            os.environ.get("RAG_LLM_MODERATION", "").lower() in ("1", "true", "yes")
+        )
     )
     openai_moderation_enabled: bool = field(
-        default_factory=lambda: os.environ.get("RAG_OPENAI_MODERATION", "").lower() in ("1", "true", "yes")
+        default_factory=lambda: (
+            os.environ.get("RAG_OPENAI_MODERATION", "").lower() in ("1", "true", "yes")
+        )
     )

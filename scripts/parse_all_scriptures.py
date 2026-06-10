@@ -404,9 +404,7 @@ def parse_yajurveda(base_dir: Path) -> list[dict[str, Any]]:
                     # YV adhyaya text occasionally contains the same verse
                     # marker twice (e.g. adhyaya 6 has two `॥२॥`); disambiguate
                     # rather than overwrite in Qdrant.
-                    verse_id = disambiguate_id(
-                        f"yv_{samhita_tag}_{adhyaya}_{verse_num}", seen_ids
-                    )
+                    verse_id = disambiguate_id(f"yv_{samhita_tag}_{adhyaya}_{verse_num}", seen_ids)
                     verses.append(
                         make_verse(
                             verse_id,
@@ -618,9 +616,7 @@ def parse_valmiki_ramayana(base_dir: Path) -> list[dict[str, Any]]:
                 # Upstream JSON has duplicate (kaanda, sarg, shloka) keys with
                 # distinct text in Aranya Sarga 34 (26 dups) and Kishkindha
                 # Sarga 10 (35 dups); disambiguate rather than overwrite.
-                verse_id = disambiguate_id(
-                    f"vr_{kanda_num}_{sarg}_{shloka}", seen_ids
-                )
+                verse_id = disambiguate_id(f"vr_{kanda_num}_{sarg}_{shloka}", seen_ids)
                 verses.append(
                     make_verse(
                         verse_id,

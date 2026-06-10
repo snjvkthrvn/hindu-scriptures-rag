@@ -8,9 +8,8 @@ import re
 from typing import Any
 from urllib.parse import urlparse
 
-from flask import Request, current_app, has_request_context, jsonify
-
 from config import RAGConfig
+from flask import Request, current_app, has_request_context, jsonify
 
 # Delimiters used to mark untrusted text in prompts. If a user's own text contained
 # the closing delimiter we'd let them break out of the sandbox, so we always neutralize
@@ -71,7 +70,10 @@ def auth_allows_request(request: Request, session: Any) -> tuple[bool, str | Non
     if need_sess and session.get("rag_ok"):
         return True, None
     if need_key or need_sess:
-        return False, "Unauthorized. Send a valid X-API-Key, log in (POST /api/login), or use /auth."
+        return (
+            False,
+            "Unauthorized. Send a valid X-API-Key, log in (POST /api/login), or use /auth.",
+        )
     return True, None
 
 

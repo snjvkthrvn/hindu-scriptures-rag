@@ -6,7 +6,7 @@ Get the chat UI running in under five minutes. For deeper context (architecture,
 
 - Python 3.10 or higher
 - Docker + Docker Compose (recommended) **or** a local Qdrant instance
-- A Cohere API key (embeddings) and either Anthropic or OpenAI API key (answer generation)
+- A Gemini API key (main-corpus embeddings; Cohere for the `/beta` English corpus) and either Anthropic or OpenAI API key (answer generation)
 
 ## TL;DR — Docker
 
@@ -14,14 +14,14 @@ Get the chat UI running in under five minutes. For deeper context (architecture,
 git clone https://github.com/snjvkthrvn/hindu-scriptures-rag.git
 cd hindu-scriptures-rag
 
-cp .env.example .env       # fill in COHERE_API_KEY + ANTHROPIC_API_KEY
-make deploy                # starts Qdrant + Caddy + the rag service
+cp .env.example .env       # fill in GEMINI_API_KEY + ANTHROPIC_API_KEY (+ COHERE_API_KEY for /beta)
+make deploy                # starts Qdrant + the rag service
 make deploy-index          # one-time: embed verses into Qdrant
 ```
 
 Open:
-- `http://localhost/` — full multilingual corpus
-- `http://localhost/beta` — English-only beta
+- `http://localhost:5002/` — full multilingual corpus
+- `http://localhost:5002/beta` — English-only beta
 
 That's it.
 

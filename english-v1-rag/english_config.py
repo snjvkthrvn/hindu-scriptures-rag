@@ -4,8 +4,8 @@ Reuses RAGConfig from scripts/rag but overrides collection name and verses file
 to point at the English-only corpus.
 """
 
-from dataclasses import replace
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 # Ensure our own directory is first on sys.path so local modules (agent/,
@@ -20,7 +20,7 @@ if _rag_dir not in sys.path:
     idx = sys.path.index(_eng_dir) + 1
     sys.path.insert(idx, _rag_dir)
 
-from config import PROJECT_ROOT, RAGConfig, EmbeddingProvider  # noqa: E402
+from config import PROJECT_ROOT, EmbeddingProvider, RAGConfig  # noqa: E402
 
 ENGLISH_RAG_DIR = Path(__file__).resolve().parent
 ENGLISH_VERSES_FILE = ENGLISH_RAG_DIR / "verses_english_only.json"

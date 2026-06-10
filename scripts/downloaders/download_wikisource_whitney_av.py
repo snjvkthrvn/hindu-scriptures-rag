@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import json
 import re
-import sys
 import time
 from datetime import datetime, timezone
 from html.parser import HTMLParser
@@ -39,21 +38,36 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 OUTPUT_FILE = PROJECT_ROOT / "raw" / "wikisource" / "atharvaveda_whitney.json"
 
 ROMAN = {
-    1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII",
-    8: "VIII", 9: "IX", 10: "X", 11: "XI", 12: "XII", 13: "XIII",
-    14: "XIV", 15: "XV", 16: "XVI", 17: "XVII", 18: "XVIII", 19: "XIX",
+    1: "I",
+    2: "II",
+    3: "III",
+    4: "IV",
+    5: "V",
+    6: "VI",
+    7: "VII",
+    8: "VIII",
+    9: "IX",
+    10: "X",
+    11: "XI",
+    12: "XII",
+    13: "XIII",
+    14: "XIV",
+    15: "XV",
+    16: "XVI",
+    17: "XVII",
+    18: "XVIII",
+    19: "XIX",
 }
 BOOKS_TO_FETCH = list(range(1, 20))  # 1..19 — skip 20 (Whitney didn't translate)
 PARYAYA_BOOKS = {15, 16}  # use /Paryaya_N instead of /Hymn_N
 
-USER_AGENT = (
-    "hindu-scriptures-rag/0.1 (research, contact: sanjeevkathiravanpro@gmail.com)"
-)
+USER_AGENT = "hindu-scriptures-rag/0.1 (research, contact: sanjeevkathiravanpro@gmail.com)"
 REQUEST_DELAY_SEC = 0.5
 
 
 # ────────────────────────────────────────────────────────────────────────────
 # HTTP
+
 
 def fetch(url: str) -> str:
     """GET a Wikisource page with a polite UA, return decoded text."""
@@ -65,6 +79,7 @@ def fetch(url: str) -> str:
 
 # ────────────────────────────────────────────────────────────────────────────
 # Minimal HTML → paragraph-text extractor (no bs4 dependency)
+
 
 class _ParagraphExtractor(HTMLParser):
     """Collect the text content of every <p> tag in document order."""
@@ -135,9 +150,7 @@ def parse_book_index(html: str, book_roman: str) -> list[dict]:
             continue
         whitney = int(nm.group(1))
         if nm.group(2):
-            canonical = [
-                int(s) for s in re.split(r",_?", nm.group(2)) if s.strip().isdigit()
-            ]
+            canonical = [int(s) for s in re.split(r",_?", nm.group(2)) if s.strip().isdigit()]
         else:
             canonical = [whitney]
         seen[path] = {"path": path, "whitney": whitney, "canonical": canonical}
@@ -156,8 +169,9 @@ PROVENANCE = {
 }
 
 
-def build_verse_record(book_num: int, hymn_num: int, verse_num: int, text: str,
-                        whitney_hymn: int, source_path: str) -> dict:
+def build_verse_record(
+    book_num: int, hymn_num: int, verse_num: int, text: str, whitney_hymn: int, source_path: str
+) -> dict:
     """Assemble a record matching the english merger's expected schema.
 
     IDs are minted to align with main corpus av_<book>_<sukta>_<verse>.
@@ -191,6 +205,7 @@ def build_verse_record(book_num: int, hymn_num: int, verse_num: int, text: str,
 
 # ────────────────────────────────────────────────────────────────────────────
 # Main
+
 
 def main() -> int:
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)

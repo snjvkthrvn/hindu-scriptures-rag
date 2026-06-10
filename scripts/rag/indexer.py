@@ -205,11 +205,13 @@ def index(config: RAGConfig | None = None, resume: bool = False) -> None:
 
         # BM25 text: combine Sanskrit + transliteration + translation for term matching
         content = verse.get("content", {})
-        bm25_text = build_sparse_text([
-            content.get("sanskrit", ""),
-            content.get("transliteration", ""),
-            content.get("translation", ""),
-        ])
+        bm25_text = build_sparse_text(
+            [
+                content.get("sanskrit", ""),
+                content.get("transliteration", ""),
+                content.get("translation", ""),
+            ]
+        )
 
         verse_chunks.append((verse_id, embeddable, bm25_text, payload))
 
@@ -227,6 +229,19 @@ def index(config: RAGConfig | None = None, resume: bool = False) -> None:
     print(f"  Verse chunks: {len(verse_chunks):,}")
     print(f"  Commentary chunks: {len(commentary_chunks):,}")
     print(f"  Total: {total:,}")
+
+    # Duplicate IDs hash to the same Qdrant point ID and silently overwrite each
+    # other. The post-run count assertion would catch that too, but only after
+    # paying for the full embedding run — so fail here, before any API calls.
+    all_ids = [c[0] for c in verse_chunks] + [c[0] for c in commentary_chunks]
+    if len(set(all_ids)) != len(all_ids):
+        from collections import Counter
+
+        dups = [i for i, n in Counter(all_ids).items() if n > 1]
+        raise AssertionError(
+            f"{len(dups)} duplicate chunk ID(s) would overwrite Qdrant points "
+            f"(first few: {dups[:5]}). Fix the parsers before indexing."
+        )
 
     # Index all chunks
     all_chunks = verse_chunks + commentary_chunks
